@@ -703,3 +703,60 @@ assertEquals(45.35, obj.getKilogram(), 0);
 
 ## 忽略属性
 
+由于 MapStruct 在编译时运行，因此它可以比基于反射或动态代理的框架更快。**如果映射不完整**，它还**生成错误报告**——也就是说，如果不是所有的目标属性都被映射：
+
+```
+Warning:(X,X) java: Unmapped target property: "propertyName".
+```
+
+例子：
+
+```java
+public class DocumentDTO {
+    private int id;
+    private String title;
+    private String text;
+    private List<String> comments;//Dto独有
+    private String author;//Dto独有
+}
+public class Document {
+    private int id;
+    private String title;
+    private String text;
+    private Date modificationTime;//实体类独有
+}
+```
+
+
+
+```java
+@Mapper
+public interface DocumentMapper {
+    DocumentMapper INSTANCE = Mappers.getMapper(DocumentMapper.class);
+
+    DocumentDTO documentToDocumentDTO(Document entity);
+    Document documentDTOToDocument(DocumentDTO dto);
+}
+```
+
+由于实体类和Dto属性不完全对的上，在编译时，会爆警告，解决：
+
+## 忽略指定字段：ignore属性
+
+```java
+@Mapper
+public interface DocumentMapperMappingIgnore {
+
+    DocumentMapperMappingIgnore INSTANCE =
+      Mappers.getMapper(DocumentMapperMappingIgnore.class);
+
+    @Mapping(target = "comments", ignore = true)
+    @Mapping(target = "author", ignore = true)
+    DocumentDTO documentToDocumentDTO(Document entity);
+
+    @Mapping(target = "modificationTime", ignore = true)
+    Document documentDTOToDocument(DocumentDTO dto);
+}
+```
+
+对于字段很多时，这种
