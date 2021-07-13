@@ -1,4 +1,4 @@
-# 资源
+# 学习资源
 
 教程 https://www.baeldung.com/mapstruct
 
@@ -6,9 +6,13 @@
 
 使用案例：https://github.com.cnpmjs.org/mapstruct/mapstruct-examples.git
 
-# 快速入门
+# 基本使用
 
-## 依赖
+## MapStruct是什么
+
+用来处理实体类转Dto，MapStruct是个注解处理器，它在编译期生成实体类转Dto的具体逻辑
+
+## 加入依赖
 
 1.4.2.Final是当前最新版本
 
@@ -129,7 +133,9 @@ public class SimpleSourceDestinationMapperIntegrationTest {
 }
 ```
 
-## MapStruct注入Spring容器
+## MapStruct注入Spring容器⭐
+
+最好是注入容器
 
 ```java
 @Mapper(componentModel = "spring")
@@ -180,7 +186,7 @@ public class Employee {
 }
 ```
 
-映射接口
+映射接口,字段名和属性不一致时,通过@Mapping来明确指定
 
 ```java
 @Mapper
@@ -238,7 +244,7 @@ public class Division {
 }
 ```
 
-再次添加两个方法到EmployeeMapper中
+再次添加两个方法到 EmployeeMapper 中
 
 ```java
 DivisionDTO divisionToDivisionDTO(Division entity);
@@ -247,3 +253,453 @@ Division divisionDTOtoDivision(DivisionDTO dto);
 ```
 
 测试使用：
+
+```java
+@Test
+public void givenEmpDTONestedMappingToEmp_whenMaps_thenCorrect() {
+    EmployeeDTO dto = new EmployeeDTO();
+    dto.setDivision(new DivisionDTO(1, "Division1"));
+    Employee entity = mapper.employeeDTOtoEmployee(dto);
+    assertEquals(dto.getDivision().getId(), 
+                 entity.getDivision().getId());
+    assertEquals(dto.getDivision().getName(), 
+                 entity.getDivision().getName());
+}
+```
+
+## 映射：Date和String
+
+```java
+public class Employee {
+    // other fields
+    private Date startDt;
+    // getters and setters
+}
+public class EmployeeDTO {
+    // other fields
+    private String employeeStartDt;
+    // getters and setters
+}
+```
+
+接口：
+
+```java
+@Mappings({
+  @Mapping(target="employeeId", source = "entity.id"),
+  @Mapping(target="employeeName", source = "entity.name"),
+  @Mapping(target="employeeStartDt", source = "entity.startDt",
+           dateFormat = "dd-MM-yyyy HH:mm:ss")})
+EmployeeDTO employeeToEmployeeDTO(Employee entity);
+@Mappings({
+  @Mapping(target="id", source="dto.employeeId"),
+  @Mapping(target="name", source="dto.employeeName"),
+  @Mapping(target="startDt", source="dto.employeeStartDt",
+           dateFormat="dd-MM-yyyy HH:mm:ss")})
+Employee employeeDTOtoEmployee(EmployeeDTO dto);
+```
+
+测试：
+
+```java
+private static final String DATE_FORMAT = "dd-MM-yyyy HH:mm:ss";
+@Test
+public void givenEmpStartDtMappingToEmpDTO_whenMaps_thenCorrect() throws ParseException {
+    Employee entity = new Employee();
+    entity.setStartDt(new Date());
+    EmployeeDTO dto = mapper.employeeToEmployeeDTO(entity);
+    SimpleDateFormat format = new SimpleDateFormat(DATE_FORMAT);
+ 
+    assertEquals(format.parse(dto.getEmployeeStartDt()).toString(),
+      entity.getStartDt().toString());
+}
+@Test
+public void givenEmpDTOStartDtMappingToEmp_whenMaps_thenCorrect() throws ParseException {
+    EmployeeDTO dto = new EmployeeDTO();
+    dto.setEmployeeStartDt("01-04-2016 01:00:00");
+    Employee entity = mapper.employeeDTOtoEmployee(dto);
+    SimpleDateFormat format = new SimpleDateFormat(DATE_FORMAT);
+ 
+    assertEquals(format.parse(dto.getEmployeeStartDt()).toString(),
+      entity.getStartDt().toString());
+}
+```
+
+## 自定义方法映射：抽象类代替接口
+
+有时候，我们写的Mapper接口，由于一般的接口方法没有方法体（static和default除外），遇到复杂的dto转entity场景还是有点力不从心，这时就可以时**抽象类**来代替这个接口，因为抽象类的方法可以写方法体，这里面可以写一些复杂的逻辑。
+
+实体类：
+
+```java
+public class Transaction {
+    private Long id;
+    private String uuid = UUID.randomUUID().toString();
+    private BigDecimal total;
+
+    //standard getters
+}
+```
+
+和匹配的 DTO：
+
+```java
+public class TransactionDTO {
+
+    private String uuid;
+    private Long totalInCents;
+
+    // standard getters and setters
+}
+```
+
+这里棘手的部分是将BigDecimal转换为Long totalInCents。
+
+@Mappe标注的抽象类：
+
+```java
+@Mapper
+abstract class TransactionMapper {
+
+    //主要实现
+    public TransactionDTO toTransactionDTO(Transaction transaction) {
+        TransactionDTO transactionDTO = new TransactionDTO();
+        transactionDTO.setUuid(transaction.getUuid());
+        transactionDTO.setTotalInCents(transaction.getTotal()
+          .multiply(new BigDecimal("100")).longValue());
+        return transactionDTO;
+    }
+    
+    //将Collection映射到List
+    public abstract List<TransactionDTO> toTransactionDTO(Collection<Transaction> transactions);
+}
+```
+
+和接口一样，在**编译时，自动生成**了这个抽象类的子类：
+
+```java
+@Generated
+class TransactionMapperImpl extends TransactionMapper {
+    //非abstract方法，就使用父类的
+    //自动生成abstract方法的方法体
+    @Override
+    public List<TransactionDTO> toTransactionDTO(Collection<Transaction> transactions) {
+        if ( transactions == null ) {
+            return null;
+        }
+
+        List<TransactionDTO> list = new ArrayList<>();
+        for ( Transaction transaction : transactions ) {
+            list.add( toTransactionDTO( transaction ) );
+        }
+
+        return list;
+    }
+}
+```
+
+## 映射前后的额外逻辑：@BeforeMapping、@AfterMapping
+
+**用于标记在映射逻辑之前和之后调用的方法**
+
+将此**行为应用于所有映射的超类型的**场景中
+
+父类：
+
+```java
+public class Car {
+    private int id;
+    private String name;
+}
+```
+
+两个子类：
+
+```java
+public class BioDieselCar extends Car {
+}
+public class ElectricCar extends Car {
+}
+```
+
+Dto和枚举:
+
+```java
+public class CarDTO {
+    private int id;
+    private String name;
+    private FuelType fuelType;
+}
+public enum FuelType {
+    ELECTRIC, BIO_DIESEL
+}
+```
+
+Mapper:
+
+```java
+@Mapper
+public abstract class CarsMapper {
+    @BeforeMapping
+    protected void enrichDTOWithFuelType(Car car, @MappingTarget CarDTO carDto) {
+        if (car instanceof ElectricCar) {
+            carDto.setFuelType(FuelType.ELECTRIC);
+        }
+        if (car instanceof BioDieselCar) { 
+            carDto.setFuelType(FuelType.BIO_DIESEL);
+        }
+    }
+
+    @AfterMapping
+    protected void convertNameToUpperCase(@MappingTarget CarDTO carDto) {
+        carDto.setName(carDto.getName().toUpperCase());
+    }
+
+    public abstract CarDTO toCarDto(Car car);
+}
+```
+
+**@MappingTarget**标在方法参数前，在**@BeforeMapping 的**情况下，在映射逻辑执行之前和在@AfterMapping注释方法的情况下，在执行映射逻辑之前填充目标映射DTO。
+
+编译后生成的mapper子类:
+
+```java
+@Generated
+public class CarsMapperImpl extends CarsMapper {
+    @Override
+    public CarDTO toCarDto(Car car) {
+        if (car == null) {
+            return null;
+        }
+        CarDTO carDTO = new CarDTO();
+        enrichDTOWithFuelType(car, carDTO);
+        carDTO.setId(car.getId());
+        carDTO.setName(car.getName());
+        convertNameToUpperCase(carDTO);
+        return carDTO;
+    }
+}
+```
+
+## 支持 Lombok
+
+maven插件中添加如下：
+
+```xml
+<plugin>
+    <groupId>org.apache.maven.plugins</groupId>
+    <artifactId>maven-compiler-plugin</artifactId>
+    <version>3.5.1</version>
+    <configuration>
+        <source>1.8</source>
+        <target>1.8</target>
+        <annotationProcessorPaths>
+            <path>
+                <groupId>org.mapstruct</groupId>
+                <artifactId>mapstruct-processor</artifactId>
+                <version>1.4.2.Final</version>
+            </path>
+            <path>
+                <groupId>org.projectlombok</groupId>
+                <artifactId>lombok</artifactId>
+	        <version>1.18.4</version>
+            </path>
+            <path>
+                <groupId>org.projectlombok</groupId>
+                <artifactId>lombok-mapstruct-binding</artifactId>
+	        <version>0.2.0</version>
+            </path>
+        </annotationProcessorPaths>
+    </configuration>
+</plugin>
+```
+
+实体类：
+
+```java
+@Getter
+@Setter
+public class Car {
+    private int id;
+    private String name;
+}
+```
+
+Dto:
+
+```java
+@Getter
+@Setter
+public class CarDTO {
+    private int id;
+    private String name;
+}
+```
+
+mapper接口：
+
+```java
+@Mapper
+public interface CarMapper {
+    CarMapper INSTANCE = Mappers.getMapper(CarMapper.class);
+    CarDTO carToCarDTO(Car car);
+}
+```
+
+## 空字段的映射处理
+
+@Mapping注解的defaultExpression属性来指定一个表达式，如果源字段为null ，则该表达式确定目标字段的值
+
+实体类：
+
+```java
+public class Person {
+    private int id;
+    private String name;
+}
+```
+
+Dto:
+
+```java
+public class PersonDTO {
+    private int id;
+    private String name;
+}
+```
+
+如果源实体的id字段为null，我们希望生成一个随机id并将其分配给目标，并保持其他属性值不变：
+
+```java
+@Mapper
+public interface PersonMapper {
+    PersonMapper INSTANCE = Mappers.getMapper(PersonMapper.class);
+    
+    @Mapping(target = "id", source = "person.id", 
+      defaultExpression = "java(java.util.UUID.randomUUID().toString())")
+    PersonDTO personToPersonDTO(Person person);
+}
+```
+
+测试：
+
+```java
+@Test
+public void givenPersonEntitytoPersonWithExpression_whenMaps_thenCorrect() 
+    Person entity  = new Person();
+    entity.setName("Micheal");
+    PersonDTO personDto = PersonMapper.INSTANCE.personToPersonDTO(entity);
+    assertNull(entity.getId());
+    assertNotNull(personDto.getId());
+    assertEquals(personDto.getName(), entity.getName());
+}
+```
+
+# 进阶使用
+
+## 自定义方法映射：qualifiedByName属性
+
+来看一个计算体重指数（BMI）的实体类
+
+Dto:
+
+```java
+public class UserBodyImperialValuesDTO {
+    private int inch;
+    private int pound;
+    // constructor, getters, and setters
+}
+```
+
+实体类：
+
+```java
+public class UserBodyValues {
+    private double kilogram;
+    private double centimeter;
+    // constructor, getters, and setters
+}
+```
+
+mapper接口：**qualifiedByName属性指向@Named注解的值来自定义额外的逻辑**
+
+```java
+@Mapper
+public interface UserBodyValuesMapper {
+    UserBodyValuesMapper INSTANCE = Mappers.getMapper(UserBodyValuesMapper.class);
+    
+    //Dto转entity
+    @Mapping(source = "inch", target = "centimeter", qualifiedByName = "inchToCentimeter")
+    public UserBodyValues userBodyValuesMapper(UserBodyImperialValuesDTO dto);
+    
+    @Named("inchToCentimeter") 
+    public static double inchToCentimeter(int inch) { 
+        return inch * 2.54; 
+    }
+}
+```
+
+测试：
+
+```java
+UserBodyImperialValuesDTO dto = new UserBodyImperialValuesDTO();
+dto.setInch(10);
+
+UserBodyValues obj = UserBodyValuesMapper.INSTANCE.userBodyValuesMapper(dto);
+
+assertNotNull(obj);
+assertEquals(25.4, obj.getCentimeter(), 0);
+```
+
+## 自定义注解来实现映射方法
+
+自定义注解：@PoundToKilogramMapper
+
+```java
+@Qualifier
+@Target(ElementType.METHOD)
+@Retention(RetentionPolicy.CLASS)
+public @interface PoundToKilogramMapper {
+}
+```
+
+将@PoundToKilogramMapper注解添加到上述案例的poundToKilogram方法中：
+
+```java
+@PoundToKilogramMapper
+public static double poundToKilogram(int pound) {
+    return pound * 0.4535;
+}
+```
+
+然后用qualifiedBy 指向这个注解的方法：
+
+```java
+@Mapper
+public interface UserBodyValuesMapper {
+    UserBodyValuesMapper INSTANCE = Mappers.getMapper(UserBodyValuesMapper.class);
+
+    @Mapping(source = "pound", target = "kilogram", qualifiedBy = PoundToKilogramMapper.class)
+    public UserBodyValues userBodyValuesMapper(UserBodyImperialValuesDTO dto);
+
+    @PoundToKilogramMapper
+    public static double poundToKilogram(int pound) {
+        return pound * 0.4535;
+    }
+}
+```
+
+测试：
+
+```java
+UserBodyImperialValuesDTO dto = new UserBodyImperialValuesDTO();
+dto.setPound(100);
+
+UserBodyValues obj = UserBodyValuesMapper.INSTANCE.userBodyValuesMapper(dto);
+
+assertNotNull(obj);
+assertEquals(45.35, obj.getKilogram(), 0);
+```
+
+## 忽略属性
+
