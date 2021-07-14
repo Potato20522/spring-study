@@ -1,6 +1,6 @@
 # 学习资源
 
-教程 https://www.baeldung.com/mapstruct
+推荐教程 https://www.baeldung.com/mapstruct
 
 官网 https://mapstruct.org/
 
@@ -10,7 +10,7 @@
 
 ## MapStruct是什么
 
-用来处理实体类转Dto，MapStruct是个注解处理器，它在编译期生成实体类转Dto的具体逻辑
+用来处理实体类转Dto，MapStruct是个**注解处理器**，它在**编译期**生成实体类转Dto的具体逻辑
 
 ## 加入依赖
 
@@ -108,7 +108,7 @@ public class SimpleSourceDestinationMapperImpl
 ```java
 public class SimpleSourceDestinationMapperIntegrationTest {
     private SimpleSourceDestinationMapper mapper
-      = Mappers.getMapper(SimpleSourceDestinationMapper.class);
+      = Mappers.getMapper(SimpleSourceDestinationMapper.class);//注意这个，获取mapper
     @Test
     public void givenSourceToDestination_whenMaps_thenCorrect() {
         SimpleSource simpleSource = new SimpleSource();
@@ -481,7 +481,9 @@ public class CarsMapperImpl extends CarsMapper {
 }
 ```
 
-## 支持 Lombok
+## 支持 Lombok⭐
+
+因为Lombok也是在编译时生成Java代码的，所以这里需要配置一下
 
 maven插件中添加如下：
 
@@ -502,12 +504,12 @@ maven插件中添加如下：
             <path>
                 <groupId>org.projectlombok</groupId>
                 <artifactId>lombok</artifactId>
-	        <version>1.18.4</version>
+                <version>1.18.4</version>
             </path>
             <path>
                 <groupId>org.projectlombok</groupId>
                 <artifactId>lombok-mapstruct-binding</artifactId>
-	        <version>0.2.0</version>
+                <version>0.2.0</version>
             </path>
         </annotationProcessorPaths>
     </configuration>
@@ -741,7 +743,7 @@ public interface DocumentMapper {
 
 由于实体类和Dto属性不完全对的上，在编译时，会爆警告，解决：
 
-## 忽略指定字段：ignore属性
+### 忽略指定字段：ignore属性
 
 ```java
 @Mapper
@@ -759,4 +761,528 @@ public interface DocumentMapperMappingIgnore {
 }
 ```
 
-对于字段很多时，这种
+对于字段很多时，这种写法就不方便了，需要定义忽略策略
+
+### 忽略策略⭐
+
+ReportingPolicy有三种策略：
+
+- ERROR： 字段只要有对不上的，直接编译失败
+- WARN（默认）：编译时爆警告
+- IGNORE：字段对不上的就忽略
+
+**写法一、为单个的映射接口添加忽略策略：**
+
+```java
+@Mapper(unmappedTargetPolicy = ReportingPolicy.IGNORE)
+public interface DocumentMapperUnmappedPolicy {
+    // mapper methods
+}
+```
+
+**写法二、为所有接口添加忽略策略：**
+
+先写个配置
+
+```java
+@MapperConfig(unmappedTargetPolicy = ReportingPolicy.IGNORE)
+public interface IgnoreUnmappedMapperConfig {
+}
+```
+
+再在映射接口上引入配置：
+
+```java
+@Mapper(config = IgnoreUnmappedMapperConfig.class)
+public interface DocumentMapperWithConfig { 
+    // mapper methods 
+}
+```
+
+**写法三、在注解处理器配置里添加忽略策略**（推荐）
+
+这样可以针对整个项目代码中所有的mapper接口添加忽略策略
+
+```xml
+<build>
+    <plugins>
+        <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <version>${maven-compiler-plugin.version}</version>
+            <configuration>
+                <source>${maven.compiler.source}</source>
+                <target>${maven.compiler.target}</target>
+                <annotationProcessorPaths>
+                    <path>
+                        <groupId>org.mapstruct</groupId>
+                        <artifactId>mapstruct-processor</artifactId>
+                        <version>${org.mapstruct.version}</version>
+                    </path>
+                </annotationProcessorPaths>
+                <compilerArgs>
+                    <compilerArg>
+                        -Amapstruct.unmappedTargetPolicy=IGNORE
+                    </compilerArg>
+                </compilerArgs>
+            </configuration>
+        </plugin>
+    </plugins>
+</build>
+```
+
+**加载顺序**
+
+以上几种写法有加载顺序之分，从高到底如下：
+
+- 忽略映射器方法级别的特定字段
+- 映射器上的策略
+- 共享 MapperConfig
+- 全局配置
+
+## 多个实体类合并到一个目标类
+
+源实体类1：
+
+```java
+class Customer {
+    private String firstName;
+    private String lastName;
+    // getters and setters
+
+}
+```
+
+源实体类2：
+
+```java
+class Address {
+    private String street;
+    private String postalcode;
+    private String county;
+    // getters and setters
+
+}
+```
+
+目标类Dto:
+
+```java
+class DeliveryAddress {
+    private String forename;
+    private String surname;
+    
+    private String street;
+    private String postalcode;
+    private String county;
+    // getters and setters
+}
+```
+
+可以看出Dto的属性来源于两个实体类，映射到Dto的写法如下：
+
+映射接口
+
+```java
+@Mapper
+interface DeliveryAddressMapper {
+
+    @Mapping(source = "customer.firstName", target = "forename")
+    @Mapping(source = "customer.lastName", target = "surname")
+    @Mapping(source = "address.street", target = "street")
+    @Mapping(source = "address.postalcode", target = "postalcode")
+    @Mapping(source = "address.county", target = "county")
+    DeliveryAddress from(Customer customer, Address address);
+
+}
+```
+
+测试一下
+
+```java
+// given a customer
+Customer customer = new Customer().setFirstName("Max")
+    .setLastName("Powers");
+
+// and some address
+Address homeAddress = new Address().setStreet("123 Some Street")
+    .setCounty("Nevada")
+    .setPostalcode("89123");
+
+// when calling DeliveryAddressMapper::from
+DeliveryAddress deliveryAddress = deliveryAddressMapper.from(customer, homeAddress);
+
+// then a new DeliveryAddress is created, based on the given customer and his home address
+assertEquals(deliveryAddress.getForename(), customer.getFirstName());
+assertEquals(deliveryAddress.getSurname(), customer.getLastName());
+assertEquals(deliveryAddress.getStreet(), homeAddress.getStreet());
+assertEquals(deliveryAddress.getCounty(), homeAddress.getCounty());
+assertEquals(deliveryAddress.getPostalcode(), homeAddress.getPostalcode());
+```
+
+不限于两个源实体类。**任意多的都可以**
+
+## 更新已存在的目标对象属性
+
+有时候，我们的Dto对象已经创建好了，只想更新一下里面的字段，这就需要@MappingTarget注解
+
+```java
+@Mapper
+interface DeliveryAddressMapper {
+    //源实体类：Address    Dto: DeliveryAddress
+    @Mapping(source = "address.postalcode", target = "postalcode")
+    @Mapping(source = "address.county", target = "county")
+    DeliveryAddress updateAddress(@MappingTarget DeliveryAddress deliveryAddress, Address address);
+
+}
+```
+
+测试一下
+
+```java
+// given a delivery address
+DeliveryAddress deliveryAddress = new DeliveryAddress().setForename("Max")
+  .setSurname("Powers")
+  .setStreet("123 Some Street")
+  .setCounty("Nevada")
+  .setPostalcode("89123");
+
+// and some new address
+Address newAddress = new Address().setStreet("456 Some other street")
+  .setCounty("Arizona")
+  .setPostalcode("12345");
+
+// when calling DeliveryAddressMapper::updateAddress
+DeliveryAddress updatedDeliveryAddress = deliveryAddressMapper.updateAddress(deliveryAddress, newAddress);
+
+// then the *existing* delivery address is updated
+assertSame(deliveryAddress, updatedDeliveryAddress);
+
+assertEquals(deliveryAddress.getStreet(), newAddress.getStreet());
+assertEquals(deliveryAddress.getCounty(), newAddress.getCounty());
+assertEquals(deliveryAddress.getPostalcode(), newAddress.getPostalcode());
+```
+
+## 集合映射
+
+有时候，需要从List<实体类>映射到List\<Dto> ，或者实体类中有个成员属性是List<实体类>，需要映射到的Dto里也有List\<Dto>，在之前的处理中，我们需要遍历List集合，或者用stream api（本质上也是遍历集合），写起来麻烦，执行效率不高。
+
+### List映射⭐
+
+#### List<实体类> 《===》List\<Dto>
+
+源实体类
+
+```java
+public class Employee {
+    private String firstName;
+    private String lastName;
+
+    // constructor, getters and setters
+}
+```
+
+目标 DTO：
+
+```java
+public class EmployeeDTO {
+
+    private String firstName;
+    private String lastName;
+
+    // getters and setters
+}
+```
+
+接下来，写个映射接口：
+
+```java
+@Mapper
+public interface EmployeeMapper {
+    List<EmployeeDTO> map(List<Employee> employees);
+}
+```
+
+看看**编译时自动生成的**实现类
+
+```java
+public class EmployeeMapperImpl implements EmployeeMapper {
+
+    @Override
+    public List<EmployeeDTO> map(List<Employee> employees) {
+        if (employees == null) {
+            return null;
+        }
+
+        List<EmployeeDTO> list = new ArrayList<EmployeeDTO>(employees.size());
+        for (Employee employee : employees) {
+            list.add(employeeToEmployeeDTO(employee));
+        }
+
+        return list;
+    }
+
+    protected EmployeeDTO employeeToEmployeeDTO(Employee employee) {
+        if (employee == null) {
+            return null;
+        }
+
+        EmployeeDTO employeeDTO = new EmployeeDTO();
+
+        employeeDTO.setFirstName(employee.getFirstName());
+        employeeDTO.setLastName(employee.getLastName());
+
+        return employeeDTO;
+    }
+}
+```
+
+#### 属性不一致时
+
+当Dto是这样的呢：
+
+```java
+public class EmployeeFullNameDTO {
+    private String fullName; //fullName=firstName+lastName
+    // getter and setter
+}
+```
+
+需要这样写映射接口：
+
+```java
+@Mapper
+public interface EmployeeFullNameMapper {
+
+    List<EmployeeFullNameDTO> map(List<Employee> employees);
+
+    default EmployeeFullNameDTO map(Employee employee) {
+        EmployeeFullNameDTO employeeInfoDTO = new EmployeeFullNameDTO();
+        employeeInfoDTO.setFullName(employee.getFirstName() + " " + employee.getLastName());
+
+        return employeeInfoDTO;
+    }
+}
+```
+
+### Set映射
+
+实体类和Dto还是上一节的例子，映射接口这样写：
+
+```java
+@Mapper
+public interface EmployeeMapper {
+
+    Set<EmployeeDTO> map(Set<Employee> employees);
+}
+```
+
+MapStruct 将自动生成的代码：
+
+```java
+public class EmployeeMapperImpl implements EmployeeMapper {
+
+    @Override
+    public Set<EmployeeDTO> map(Set<Employee> employees) {
+        if (employees == null) {
+            return null;
+        }
+
+        Set<EmployeeDTO> set = 
+          new HashSet<EmployeeDTO>(Math.max((int)(employees.size() / .75f ) + 1, 16));
+        for (Employee employee : employees) {
+            set.add(employeeToEmployeeDTO(employee));
+        }
+
+        return set;
+    }
+
+    protected EmployeeDTO employeeToEmployeeDTO(Employee employee) {
+        if (employee == null) {
+            return null;
+        }
+
+        EmployeeDTO employeeDTO = new EmployeeDTO();
+
+        employeeDTO.setFirstName(employee.getFirstName());
+        employeeDTO.setLastName(employee.getLastName());
+
+        return employeeDTO;
+    }
+}
+```
+
+### Map映射
+
+```java
+@Mapper
+public interface EmployeeMapper {
+
+    Map<String, EmployeeDTO> map(Map<String, Employee> idEmployeeMap);
+}
+```
+
+MapStruct 自动生成的代码
+
+```java
+public class EmployeeMapperImpl implements EmployeeMapper {
+
+    @Override
+    public Map<String, EmployeeDTO> map(Map<String, Employee> idEmployeeMap) {
+        if (idEmployeeMap == null) {
+            return null;
+        }
+
+        Map<String, EmployeeDTO> map = new HashMap<String, EmployeeDTO>(Math.max((int)(idEmployeeMap.size() / .75f) + 1, 16));
+
+        for (java.util.Map.Entry<String, Employee> entry : idEmployeeMap.entrySet()) {
+            String key = entry.getKey();
+            EmployeeDTO value = employeeToEmployeeDTO(entry.getValue());
+            map.put(key, value);
+        }
+
+        return map;
+    }
+
+    protected EmployeeDTO employeeToEmployeeDTO(Employee employee) {
+        if (employee == null) {
+            return null;
+        }
+
+        EmployeeDTO employeeDTO = new EmployeeDTO();
+
+        employeeDTO.setFirstName(employee.getFirstName());
+        employeeDTO.setLastName(employee.getLastName());
+
+        return employeeDTO;
+    }
+}
+```
+
+## 成员属性List映射⭐
+
+@Mapper注解有一个collectionMappingStrategy属性，可以有这些值：ACCESSOR_ONLY（默认）、SETTER_PREFERRED、ADDER_PREFERRED或TARGET_IMMUTABLE。
+
+### ACCESSOR_ONLY
+
+默认的，只要Dto有get、set方法就行
+
+源实体类：
+
+```java
+public class Company {
+    private List<Employee> employees;
+   // getter and setter
+}
+```
+
+DTO：
+
+```java
+public class CompanyDTO {
+
+    private List<EmployeeDTO> employees;
+
+    public List<EmployeeDTO> getEmployees() {
+        return employees;
+    }
+
+    //set方法，ACCESSOR_ONLY用到这个
+    public void setEmployees(List<EmployeeDTO> employees) {
+        this.employees = employees;
+    }
+
+    //add方法，ADDER_PREFERRED用到
+    public void addEmployee(EmployeeDTO employeeDTO) {
+        if (employees == null) {
+            employees = new ArrayList<>();
+        }
+
+        employees.add(employeeDTO);
+    }
+}
+```
+
+Mapper:
+
+```java
+@Mapper(uses = EmployeeMapper.class)
+public interface CompanyMapper {
+    CompanyDTO map(Company company);
+}
+```
+
+生成的代码：
+
+```java
+public class CompanyMapperImpl implements CompanyMapper {
+
+    private final EmployeeMapper employeeMapper = Mappers.getMapper(EmployeeMapper.class);
+
+    @Override
+    public CompanyDTO map(Company company) {
+        if (company == null) {
+            return null;
+        }
+
+        CompanyDTO companyDTO = new CompanyDTO();
+
+        companyDTO.setEmployees(employeeMapper.map(company.getEmployees()));
+
+        return companyDTO;
+    }
+}
+```
+
+### ADDER_PREFERRED
+
+```java
+@Mapper
+public interface EmployeeMapper {
+    EmployeeDTO map(Employee employee);
+    List map(List employees);
+    Set map(Set employees);
+    Map<String, EmployeeDTO> map(Map<String, Employee> idEmployeeMap);
+}
+```
+
+这里Mapper嵌套了
+
+```java
+@Mapper(collectionMappingStrategy = CollectionMappingStrategy.ADDER_PREFERRED,
+        uses = EmployeeMapper.class)
+public interface CompanyMapperAdderPreferred {
+    CompanyDTO map(Company company);
+}
+```
+
+生成的代码：
+
+```java
+public class CompanyMapperAdderPreferredImpl implements CompanyMapperAdderPreferred {
+
+    private final EmployeeMapper employeeMapper = Mappers.getMapper( EmployeeMapper.class );
+
+    @Override
+    public CompanyDTO map(Company company) {
+        if ( company == null ) {
+            return null;
+        }
+
+        CompanyDTO companyDTO = new CompanyDTO();
+
+        if ( company.getEmployees() != null ) {
+            for ( Employee employee : company.getEmployees() ) {
+                companyDTO.addEmployee( employeeMapper.map( employee ) );
+            }
+        }
+
+        return companyDTO;
+    }
+}
+```
+
+。。。。
+
+## 对象属性深拷贝
+
