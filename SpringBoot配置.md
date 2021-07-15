@@ -1,3 +1,9 @@
+## 全部配置
+
+https://docs.spring.io/spring-boot/docs/current/reference/html/application-properties.html#application-properties
+
+
+
 ## 不占用端口启动
 
 [springboot不占用端口启动 - 陈灬大灬海 - 博客园 (cnblogs.com)](https://www.cnblogs.com/chywx/p/11234527.html)
