@@ -1206,6 +1206,16 @@ public class CompanyDTO {
 Mapper:
 
 ```java
+@Mapper
+public interface EmployeeMapper {
+
+    Map<String, EmployeeDTO> map(Map<String, Employee> idEmployeeMap);
+}
+```
+
+
+
+```java
 @Mapper(uses = EmployeeMapper.class)
 public interface CompanyMapper {
     CompanyDTO map(Company company);
