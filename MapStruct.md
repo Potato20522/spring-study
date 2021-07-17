@@ -167,6 +167,28 @@ public HelloController{
 }
 ```
 
+不注入容器获取mapper对象得写法：
+
+```java
+@Mapper
+public interface StorageMapper {
+    //起作用的是这句
+    StorageMapper INSTANCE = Mappers.getMapper( StorageMapper.class );
+
+    @Mapping( target = "weightLimit", source = "maxWeight")
+    ShelveEntity map(ShelveDto source);
+
+    @Mapping( target = "label", source = "designation")
+    BoxEntity map(BoxDto source);
+}
+```
+
+使用：
+
+```java
+ShelveEntity entity = CustomerMapper.INSTANCE.map(shelveDto);
+```
+
 
 
 ## 映射：字段名和属性不一致时
@@ -324,6 +346,34 @@ public void givenEmpDTOStartDtMappingToEmp_whenMaps_thenCorrect() throws ParseEx
       entity.getStartDt().toString());
 }
 ```
+
+## 自定义方法映射：接口默认方法
+
+```java
+@Mapper
+public interface CarMapper {
+    @Mapping(...)
+    ...
+        CarDto carToCarDto(Car car);
+    default PersonDto personToPersonDto(Person person) {
+        //hand-written mapping logic
+    }
+}
+```
+
+```java
+@Mapper
+public abstract class CarMapper {
+    @Mapping(...)
+    ...
+        public abstract CarDto carToCarDto(Car car);
+    public PersonDto personToPersonDto(Person person) {
+        //hand-written mapping logic
+    }
+}
+```
+
+
 
 ## 自定义方法映射：抽象类代替接口
 
@@ -596,6 +646,59 @@ public void givenPersonEntitytoPersonWithExpression_whenMaps_thenCorrect()
     assertEquals(personDto.getName(), entity.getName());
 }
 ```
+
+## 自定义映射逻辑：Expressions使用
+
+### 基本使用
+
+expression是@Mapping的一个属性，使用格式为：
+
+```java
+expression="java(Java语句)"
+```
+
+是的，就是在字符串里写Java语句，当然了，不是直接写大段的逻辑代码，而是让我们在这里面调用我们自己写的自定义逻辑。
+
+例子：expression里调用了自定义时间格式化的工具类
+
+```java
+@Mapper
+public interface SourceTargetMapper {
+    SourceTargetMapper INSTANCE = Mappers.getMapper( SourceTargetMapper.class );
+    @Mapping(target = "timeAndFormat",
+             expression = "java( new org.sample.TimeAndFormat( s.getTime(),s.getFormat() ) )")
+    Target sourceToTarget(Source s);
+}
+```
+
+还可以这样写，先导入包 @Mapper( imports = TimeAndFormat.class )
+
+```java
+imports org.sample.TimeAndFormat;
+@Mapper( imports = TimeAndFormat.class )
+public interface SourceTargetMapper {
+    SourceTargetMapper INSTANCE = Mappers.getMapper( SourceTargetMapper.class );
+    @Mapping(target = "timeAndFormat",
+             expression = "java( new TimeAndFormat( s.getTime(), s.getFormat() ) )")
+    Target sourceToTarget(Source s);
+}
+```
+
+### Default Expressions
+
+当目标对象的属性在转换之后为空时，我们可以使用默认的 Expressions来为这些属性赋默认值，用不用这个得看实际业务需求
+
+```java
+imports java.util.UUID;
+@Mapper(imports = UUID.class )
+public interface SourceTargetMapper {
+    SourceTargetMapper INSTANCE = Mappers.getMapper( SourceTargetMapper.class );
+    @Mapping(target="id", source="sourceId", defaultExpression = "java(UUID.randomUUID().toString() )")
+    Target sourceToTarget(Source s);
+}
+```
+
+
 
 # 进阶使用
 
@@ -924,7 +1027,7 @@ assertEquals(deliveryAddress.getPostalcode(), homeAddress.getPostalcode());
 
 ## 更新已存在的目标对象属性
 
-有时候，我们的Dto对象已经创建好了，只想更新一下里面的字段，这就需要@MappingTarget注解
+有时候，我们的Dto对象已经创建好了，只想更新一下里面的字段，这就需要@MappingTarget注解来标注目标Dto
 
 ```java
 @Mapper
@@ -1296,3 +1399,180 @@ public class CompanyMapperAdderPreferredImpl implements CompanyMapperAdderPrefer
 
 ## 对象属性深拷贝
 
+```java
+public class CustomerDto {
+    private Long id;
+    private String customerName;
+    private List<OrderItemDto> orders;
+    private Map<OrderItemKeyDto, OrderItemDto> stock;
+	//get,set...
+}
+
+public class OrderItemDto {
+    private String name;
+    private Long quantity;
+    //get,set...
+}
+
+public class OrderItemKeyDto {
+    private long stockNumber;
+    //get,set
+}
+```
+
+拷贝：
+
+```java
+@Mapper(mappingControl = DeepClone.class)
+public interface Cloner {
+
+    Cloner MAPPER = Mappers.getMapper( Cloner.class );
+
+    CustomerDto clone(CustomerDto customerDto);
+}
+```
+
+自动生成的实现类：
+
+```java
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import javax.annotation.Generated;
+import org.mapstruct.example.dto.CustomerDto;
+import org.mapstruct.example.dto.OrderItemDto;
+import org.mapstruct.example.dto.OrderItemKeyDto;
+
+@Generated(
+    value = "org.mapstruct.ap.MappingProcessor",
+    date = "2021-07-16T10:02:11+0800",
+    comments = "version: 1.4.2.Final, compiler: javac, environment: Java 1.8.0_282 (AdoptOpenJDK)"
+)
+public class ClonerImpl implements Cloner {
+
+    @Override
+    public CustomerDto clone(CustomerDto customerDto) {
+        if ( customerDto == null ) {
+            return null;
+        }
+
+        CustomerDto customerDto1 = new CustomerDto();
+
+        customerDto1.setId( customerDto.getId() );
+        customerDto1.setCustomerName( customerDto.getCustomerName() );
+        customerDto1.setOrders( orderItemDtoListToOrderItemDtoList( customerDto.getOrders() ) );
+        customerDto1.setStock( orderItemKeyDtoOrderItemDtoMapToOrderItemKeyDtoOrderItemDtoMap( customerDto.getStock() ) );
+
+        return customerDto1;
+    }
+
+    protected OrderItemDto orderItemDtoToOrderItemDto(OrderItemDto orderItemDto) {
+        if ( orderItemDto == null ) {
+            return null;
+        }
+
+        OrderItemDto orderItemDto1 = new OrderItemDto();
+
+        orderItemDto1.setName( orderItemDto.getName() );
+        orderItemDto1.setQuantity( orderItemDto.getQuantity() );
+
+        return orderItemDto1;
+    }
+
+    protected List<OrderItemDto> orderItemDtoListToOrderItemDtoList(List<OrderItemDto> list) {
+        if ( list == null ) {
+            return null;
+        }
+
+        List<OrderItemDto> list1 = new ArrayList<OrderItemDto>( list.size() );
+        for ( OrderItemDto orderItemDto : list ) {
+            list1.add( orderItemDtoToOrderItemDto( orderItemDto ) );
+        }
+
+        return list1;
+    }
+
+    protected OrderItemKeyDto orderItemKeyDtoToOrderItemKeyDto(OrderItemKeyDto orderItemKeyDto) {
+        if ( orderItemKeyDto == null ) {
+            return null;
+        }
+
+        OrderItemKeyDto orderItemKeyDto1 = new OrderItemKeyDto();
+
+        orderItemKeyDto1.setStockNumber( orderItemKeyDto.getStockNumber() );
+
+        return orderItemKeyDto1;
+    }
+
+    protected Map<OrderItemKeyDto, OrderItemDto> orderItemKeyDtoOrderItemDtoMapToOrderItemKeyDtoOrderItemDtoMap(Map<OrderItemKeyDto, OrderItemDto> map) {
+        if ( map == null ) {
+            return null;
+        }
+
+        Map<OrderItemKeyDto, OrderItemDto> map1 = new HashMap<OrderItemKeyDto, OrderItemDto>( Math.max( (int) ( map.size() / .75f ) + 1, 16 ) );
+
+        for ( java.util.Map.Entry<OrderItemKeyDto, OrderItemDto> entry : map.entrySet() ) {
+            OrderItemKeyDto key = orderItemKeyDtoToOrderItemKeyDto( entry.getKey() );
+            OrderItemDto value = orderItemDtoToOrderItemDto( entry.getValue() );
+            map1.put( key, value );
+        }
+
+        return map1;
+    }
+}
+
+```
+
+测试使用：
+
+```java
+@Test
+public void testMapDtoToEntity() {
+    CustomerDto customerDto = new CustomerDto();
+    customerDto.setId( 10L );
+    customerDto.setCustomerName("Jaques" );
+    OrderItemDto order1 = new OrderItemDto();
+    order1.setName ("Table" );
+    order1.setQuantity( 2L );
+    customerDto.setOrders( new ArrayList<>( Collections.singleton( order1 ) ) );
+    OrderItemKeyDto key = new OrderItemKeyDto();
+    key.setStockNumber( 5 );
+    Map stock = new HashMap(  );
+    stock.put( key, order1 );
+    customerDto.setStock( stock );
+
+    CustomerDto customer = Cloner.MAPPER.clone( customerDto );
+}
+```
+
+
+
+
+
+
+
+**@DeepClone**
+
+
+
+
+
+
+
+# 其他注解
+
+A mapping control (MappingControl) can be defined on all levels (@MapperConfig, @Mapper,
+@BeanMapping, @Mapping), the latter taking precedence over the former. For example: @Mapper(
+mappingControl = NoComplexMapping.class ) takes precedence over @MapperConfig( mappingControl =
+DeepClone.class ). @IterableMapping and @MapMapping work similar as @Mapping. MappingControl is
+experimental from MapStruct 1.4. MappingControl has an enum that corresponds to the first 4
+options above: MappingControl.Use#DIRECT, MappingControl.Use#MAPPING_METHOD,
+MappingControl.Use#BUILT_IN_CONVERSION and MappingControl.Use#COMPLEX_MAPPING the presence of
+which allows the user to switch on a option. The absence of an
+
+## @MappingControl
+
+全局配置的映射注解，功能包含：@MapperConfig, @Mapper,@BeanMapping, @Mapping
+
+其生效的优先级低于后面的注解
