@@ -55,3 +55,4 @@ public CarDto toCar(Car car, Locale translationLocale) {
 批量忽略
 
 - ignoreByDefault:忽略mapstruct的默认映射行为，避免不必要的赋值、避免属性覆盖，只映射了配置了@Mapping的那些属性
+

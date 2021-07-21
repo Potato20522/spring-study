@@ -1578,3 +1578,4 @@ which allows the user to switch on a option. The absence of an
 全局配置的映射注解，功能包含：@MapperConfig, @Mapper,@BeanMapping, @Mapping
 
 其生效的优先级低于后面的注解
+
