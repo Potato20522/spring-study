@@ -2,6 +2,8 @@
 
 推荐教程 https://www.baeldung.com/mapstruct
 
+推荐教程 https://www.tutorialspoint.com/mapstruct/index.htm
+
 官网 https://mapstruct.org/
 
 使用案例：https://github.com.cnpmjs.org/mapstruct/mapstruct-examples.git
