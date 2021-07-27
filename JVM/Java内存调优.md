@@ -10,13 +10,13 @@
 
 -Xms设定堆内存初始值 -Xmx设置堆内存最大值，如果不设定这两个参数，默认值就取决于操作系统，RAM，JVM本身
 
-![Intial Size](JVM.assets/Intial-Size.png)
+![Intial Size](images/Java内存调优/Intial-Size.png)
 
 **已使用的内存**
 
 used Heap: jvm中活动对象占用的内存，当used 接近committed的时候，heap就会grow up，-Xmx设置了Commit上限
 
-![Used Space](JVM.assets/Used-Space.png)
+![Used Space](images/Java内存调优/Used-Space.png)
 
 **提交的内存大小**
 
@@ -25,10 +25,6 @@ Committed Size
 提交的内存大小 始终大于或等于已使用的内存，-Xmx设置了Commit上限。
 
 表示可供java虚拟机使用的内存量，提交的内存可能会随时间的推移而变化（增加或者减少）。JVM可能会向OS释放内存，同时已提交的内存可能小于Init，已提交的内存将始终大于或等于Used Heap（ORACLE 官方文档中可以看到）。init是启动时后JVM向OS申请的内存，max是能够使用的最大边界值。注意这里说的都是虚拟内存，所以理论上整个操作系统**commited的内存为物理内存加上交换空间的大小**，换句话说如果commited超过物理内存的话，多余的部分就会被换出到磁盘。这也就是为什么jvm提交的内存可能会比实际进程占用的内存更大的原因。
-
-
-
-
 
 
 
@@ -53,6 +49,16 @@ c. 如何根据实际运行环境和应用场景，合理设置内存参数，�
 
 对内存的分析的资料比较多，一般比较常用。比如使用jmap和jhat将内存dump出来并分析对象实例，或者结合MemoryAnalyser等工具分析。
 JVM还提供了jstat， jvisualvm等工具查看内存增长的趋势、变化情况，以及各个块的区域
+
+设定-Xmx8192m后，windows任务管理器占用1046M内存
+
+![image-20210723142841583](images/Java内存调优/image-20210723142841583.png)
+
+Size: 1,240,989,696 B=1183.5M **jvm向操作系统要了这么多内存**，当发生GC时这个会变多，也可能会变少
+
+max:8,589,934,592=8192M 设定的**最大**堆内存，固定的，不设置时，默认为物理内存的1/4，当Size超过了这个值时，程序就会OOM，崩掉。
+
+used:864,753,784B=824M 堆内存**已经使用**了这么多，程序放着跑不动时，这个内存周期性变化
 
 ## **三、本地内存分析**
 
@@ -201,3 +207,217 @@ Total: reserved=1592030KB, committed=307938KB
 [https://docs.oracle.com/javase/8/docs/technotes/guides/vm/gctuning/index.html](https://link.zhihu.com/?target=https%3A//docs.oracle.com/javase/8/docs/technotes/guides/vm/gctuning/index.html)
 
 [https://docs.oracle.com/javase/](https://link.zhihu.com/?target=https%3A//docs.oracle.com/javase/8/docs/technotes/guides/vm/gctuning/cms.html%23concurrent_mark_sweep_cms_collector)
+
+# JVM默认内存
+
+https://www.cnblogs.com/guanghe/p/13558412.html
+
+照官方的说法：“Java虚拟机具有一个堆，堆是运行时数据区域，所有类实例和数组的内存均从此处分配。堆是在Java虚拟机启动时创建的。”“在JVM中堆之外的内存称为非堆内存(Non-heapmemory)”。可以看出JVM主要管理两种类型的内存：堆和非堆。简单来说堆就是Java代码可及的内存，是留给开发人员使用的；非堆就是JVM留给自己用的，所以方法区、JVM内部处理或优化所需的内存(如JIT编译后的代码缓存)、每个类结构(如运行时常数池、字段和方法数据)以及方法和构造方法的代码都在非堆内存中。
+
+**堆内存分配**
+
+JVM初始分配的内存由-Xms指定，默认是物理内存的1/64；JVM最大分配的内存由-Xmx指定，默认是物理内存的1/4。默认空余堆内存小于40%时，JVM就会增大堆直到-Xmx的最大限制；空余堆内存大于70%时，JVM会减少堆直到-Xms的最小限制。因此服务器一般设置-Xms、-Xmx相等以避免在每次GC后调整堆的大小。
+
+**非堆内存分配**
+
+JVM使用-XX:PermSize设置非堆内存初始值，默认是物理内存的1/64；由XX:MaxPermSize设置最大非堆内存的大小，默认是物理内存的1/4。
+
+**查看本机JVM最大堆内存大小**
+
+java -XshowSettings:vm
+
+在32Gwin10的机器上显示为 Max. Heap Size (Estimated): 7.06G
+
+**查看本机最大metaspace**
+
+在32Gwin10的机器上显示为
+
+```
+    uintx InitialBootClassLoaderMetaspaceSize       = 4194304                             {product}
+    uintx MaxMetaspaceSize                          = 4294967295                          {product}
+    uintx MetaspaceSize                             = 21810376                            {pd product}
+```
+
+
+
+# Java内存调优
+
+https://blog.csdn.net/zengwende/article/details/103665545
+
+![image-20210722144152925](images/Java内存调优/image-20210722144152925.png)
+
+**什么是RES和VIRT？**
+
+什么是RES和VIRT？
+
+**RES**：resident memory usage 常驻内存
+（1）进程当前使用的内存大小，但不包括swap out
+
+（2）包含其他进程的共享
+
+（3）如果申请100m的内存，实际使用10m，它只增长10m，与VIRT相反
+
+（4）关于库占用内存的情况，它只统计加载的库文件所占内存大小
+
+RES = CODE + DATA
+
+**VIRT**：virtual memory usage
+（1）进程“需要的”虚拟内存大小，包括进程使用的库、代码、数据等
+
+（2）假如进程申请100m的内存，但实际只使用了10m，那么它会增长100m，而不是实际的使用量
+
+VIRT = SWAP + RES
+
+# JVM内存总览工具
+
+## jconsole
+
+![image-20210723145630821](images/Java内存调优/image-20210723145630821.png)
+
+- 加载的类的数目、CPU占用、线程数、堆内存使用量
+- JVM参数
+- MBEAN
+- 能够查看堆中的每个区占用内存随时间的变化，以及还可以查看非堆内存（元空间在内）的占用情况
+
+## jvisualvm
+
+![image-20210723145903671](images/Java内存调优/image-20210723145903671.png)
+
+
+
+![image-20210723150258419](images/Java内存调优/image-20210723150258419.png)
+
+- 可以查看内存信息，但没有jconsole详细
+- JVM参数、系统信息
+- 线程信息更加详细
+- 可抓取CPU、内存的sample
+- 
+
+# 内存dump
+
+https://blog.csdn.net/lidengchun/article/details/83660406
+
+ 在故障定位(尤其是out of memory)和性能分析的时候，经常会用到一些文件来帮助我们排除代码问题。这些文件记录了JVM运行期间的内存占用、线程执行等情况，这就是我们常说的dump文件。常用的有heap dump和thread dump（也叫javacore，或java dump）。我们可以这么理解：**heap dump记录内存信息的**，**thread dump是记录CPU信息**的。
+
+## heap dump
+
+ heap dump文件是一个二进制文件，它保存了**某一时刻JVM堆中对象使用情况**。HeapDump文件是指定时刻的Java堆栈的快照，是一种镜像文件。Heap Analyzer工具通过分析HeapDump文件，哪些对象占用了太多的堆栈空间，来发现导致内存泄露或者可能引起内存泄露的对象。
+
+## thread dump
+
+thread dump文件主要保存的是java应用中**各线程**在**某一时刻的运行的位置**，即执行到哪一个类的哪一个方法哪一个行上。thread dump是一个文本文件，打开后可以看到每一个线程的执行栈，以stacktrace的方式显示。通过对thread dump的分析可以得到应用是否“卡”在某一点上，即在某一点运行的时间太长，如数据库查询，长期得不到响应，最终导致系统崩溃。单个的thread dump文件一般来说是没有什么用处的，因为它只是记录了某一个绝对时间点的情况。比较有用的是，线程在一个时间段内的执行情况。
+
+两个thread dump文件在分析时特别有效，困为它可以看出在先后两个时间点上，线程执行的位置，如果发现先后两组数据中同一线程都执行在同一位置，则说明此处可能有问题，因为程序运行是极快的，如果两次均在某一点上，说明这一点的耗时是很大的。通过对这两个文件进行分析，查出原因，进而解决问题。
+
+
+
+## jmap获取heap dump
+
+
+
+
+
+
+
+## jstack获取thread dump
+
+
+
+# GC日志
+
+
+
+例子：
+
+```
+-Xmx256m
+-XX:+UseG1GC
+-XX:+HeapDumpOnOutOfMemoryError
+-XX:HeapDumpPath=dump
+-verbose:gc
+-Xloggc:machine-gc.log
+-XX:+PrintGCDetails
+-XX:+PrintGCTimeStamps
+-XX:+PrintGCApplicationStoppedTime
+-XX:+PrintReferenceGC
+-Dcom.sun.management.jmxremote.authenticate=false
+-Dcom.sun.management.jmxremote.ssl=false
+```
+
+
+
+https://blog.csdn.net/yinni11/article/details/102591431
+
+```
+-XX:+PrintGC 输出简要GC日志 
+-XX:+PrintGCDetails 输出详细GC日志 
+-Xloggc:gc.log  输出GC日志到文件
+-XX:+PrintGCTimeStamps 输出GC的时间戳（以JVM启动到当期的总时长的时间戳形式） 
+-XX:+PrintGCDateStamps 输出GC的时间戳（以日期的形式，如 2013-05-04T21:53:59.234+0800） 
+-XX:+PrintHeapAtGC 在进行GC的前后打印出堆的信息
+-verbose:gc
+-XX:+PrintReferenceGC 打印年轻代各个引用的数量以及时长
+```
+
+
+
+
+
+# 监控工具
+
+
+## prometheus
+
+https://prometheus.io/docs/prometheus/latest/installation/
+
+https://www.cnblogs.com/larrydpk/p/12563497.html
+
+prometheus.yml:
+
+```yaml
+scrape_configs:
+# 可随意指定
+- job_name: 'spring'
+  # 多久采集一次数据
+  scrape_interval: 15s
+  # 采集时的超时时间
+  scrape_timeout: 10s
+  # 采集的路径
+  metrics_path: '/actuator/prometheus'
+  # 采集服务的地址，设置成Springboot应用所在服务器的具体地址
+  static_configs:
+  - targets: ['localhost:10101']
+```
+
+Dockerfile
+
+```
+FROM prom/prometheus
+ADD prometheus.yml /etc/prometheus/
+```
+
+build：
+
+```
+docker build -t my-prometheus .
+docker run -p 9090:9090 my-prometheus
+```
+
+浏览器访问：
+
+http://localhost:9090/targets
+
+
+
+
+
+## Grafana
+
+http://localhost:3000/d/MtVkFDWnz/spring-boot-2-1-statistics?orgId=1
+
+
+
+
+
+
+
