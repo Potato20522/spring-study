@@ -38,3 +38,12 @@ Netty等一些框架集成
 
 # 基本使用
 
+
+
+
+
+## 注意
+
+comile-javanano不支持service
+
+需要使用compile-custom 

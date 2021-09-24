@@ -525,6 +525,273 @@ try {
 
 [Jackson之注解大全_blwinner的专栏-CSDN博客_jackson 注解](https://blog.csdn.net/blwinner/article/details/98532847)
 
+## 常用注解
+
+https://www.baeldung.com/jackson-annotations
+
+### @JsonProperty
+
+### @JsonFormat
+
+### @JsonUnwrapped
+
+用来解开对象的属性
+
+```java
+public class UnwrappedUser {
+    public int id;
+
+    @JsonUnwrapped
+    public Name name;
+
+    public static class Name {
+        public String firstName;
+        public String lastName;
+    }
+}
+```
+
+使用：
+
+```java
+@Test
+public void whenSerializingUsingJsonUnwrapped_thenCorrect()
+  throws JsonProcessingException, ParseException {
+    UnwrappedUser.Name name = new UnwrappedUser.Name("John", "Doe");
+    UnwrappedUser user = new UnwrappedUser(1, name);
+
+    String result = new ObjectMapper().writeValueAsString(user);
+    
+    assertThat(result, containsString("John"));
+    assertThat(result, not(containsString("name")));
+}
+```
+
+结果：
+
+```json
+{
+    "id":1,
+    "firstName":"John",
+    "lastName":"Doe"
+}
+```
+
+### @JsonView
+
+使用场景：在某一些请求返回的JSON中，我们并不希望返回某些字段。而在另一些请求中需要返回某些字段，总不能一个请求就写一个Dto吧。
+
+例：获取用户信息
+
+- 在`查询列表`请求中，不返回`password`字段
+- 在`获取用户`详情中，返回`password`字段
+
+```
+1.使用接口来声明多个视图
+2.在值对象的get方法上指定视图
+3.在Controller的方法上指定视图
+```
+
+定义返回视图对象
+
+```java
+@Data
+public class User {
+    /**
+     * 用户简单视图,字段：id、username
+     */
+    public interface UserSimpleView{};
+
+    /**
+     * 用户详情视图,字段：id、username、password
+     */
+    public interface UserDetailView extends UserSimpleView{};
+
+    @JsonView(UserSimpleView.class)
+    private int id;
+    @JsonView(UserSimpleView.class)
+    private String username;
+    @JsonView(UserDetailView.class)
+    private String password;
+}
+```
+
+controller:
+
+```java
+@RestController
+public class UserController {
+
+    @GetMapping("/user")
+    @JsonView({User.UserSimpleView.class})
+    public List<User> query() {
+        List<User> users = new ArrayList<>();
+        users.add(new User(1, "john", "123456"));
+        users.add(new User(2, "tom", "123456"));
+        users.add(new User(3, "jim", "123456"));
+        return users;
+    }
+
+    /**
+     * 在url中使用正则表达式
+     *
+     * @param id
+     * @return
+     */
+    @GetMapping("/user/{id:\\d+}")
+    @JsonView(User.UserDetailView.class)
+    public User get(@PathVariable String id) {
+        User user = new User(1, "john", "123456");
+        user.setUsername("tom");
+        return user;
+    }
+}
+```
+
+### @JsonManagedReference、@JsonBackReference
+
+可以处理父/子关系和循环依赖
+
+```java
+public class ItemWithRef {
+    public int id;
+    public String itemName;
+
+    @JsonManagedReference
+    public UserWithRef owner;
+}
+```
+
+
+
+```java
+public class UserWithRef {
+    public int id;
+    public String name;
+
+    @JsonBackReference
+    public List<ItemWithRef> userItems;
+}
+```
+
+测试使用
+
+```java
+@Test
+public void whenSerializingUsingJacksonReferenceAnnotation_thenCorrect()
+  throws JsonProcessingException {
+    UserWithRef user = new UserWithRef(1, "John");
+    ItemWithRef item = new ItemWithRef(2, "book", user);
+    user.addItem(item);
+
+    String result = new ObjectMapper().writeValueAsString(item);
+
+    assertThat(result, containsString("book"));
+    assertThat(result, containsString("John"));
+    assertThat(result, not(containsString("userItems")));
+}
+```
+
+### @JsonIdentityInfo
+
+对象标识,也能处理无限递归
+
+ItemWithIdentity
+
+```java
+@JsonIdentityInfo(
+  generator = ObjectIdGenerators.PropertyGenerator.class,
+  property = "id")
+public class ItemWithIdentity {
+    public int id;
+    public String itemName;
+    public UserWithIdentity owner;
+}
+```
+
+UserWithIdentity
+
+```java
+@JsonIdentityInfo(
+  generator = ObjectIdGenerators.PropertyGenerator.class,
+  property = "id")
+public class UserWithIdentity {
+    public int id;
+    public String name;
+    public List<ItemWithIdentity> userItems;
+}
+```
+
+测试使用：
+
+```java
+@Test
+public void whenSerializingUsingJsonIdentityInfo_thenCorrect()
+  throws JsonProcessingException {
+    UserWithIdentity user = new UserWithIdentity(1, "John");
+    ItemWithIdentity item = new ItemWithIdentity(2, "book", user);
+    user.addItem(item);
+
+    String result = new ObjectMapper().writeValueAsString(item);
+
+    assertThat(result, containsString("book"));
+    assertThat(result, containsString("John"));
+    assertThat(result, containsString("userItems"));
+}
+```
+
+结果：
+
+```json
+{
+    "id": 2,
+    "itemName": "book",
+    "owner": {
+        "id": 1,
+        "name": "John",
+        "userItems": [
+            2
+        ]
+    }
+}
+```
+
+### @JsonFilter
+
+序列化时指定过滤器：
+
+```java
+@JsonFilter("myFilter")
+public class BeanWithFilter {
+    public int id;
+    public String name;
+}
+```
+
+除了name属性，其余都序列化：
+
+```java
+@Test
+public void whenSerializingUsingJsonFilter_thenCorrect()
+  throws JsonProcessingException {
+    BeanWithFilter bean = new BeanWithFilter(1, "My bean");
+
+    FilterProvider filters 
+      = new SimpleFilterProvider().addFilter(
+        "myFilter", 
+        SimpleBeanPropertyFilter.filterOutAllExcept("name"));
+
+    String result = new ObjectMapper()
+      .writer(filters)
+      .writeValueAsString(bean);
+
+    assertThat(result, containsString("My bean"));
+    assertThat(result, not(containsString("id")));
+}
+```
+
+
+
 ## 序列化注解
 
 ### @JsonAnyGetter
@@ -761,6 +1028,80 @@ private static void whenSerializingUsingJsonRootName_thenCorrect(){
 
 
 
+### @JsonSerialize
+
+可以自定义序列化
+
+```java
+public class EventWithSerializer {
+    public String name;
+
+    @JsonSerialize(using = CustomDateSerializer.class)
+    public Date eventDate;
+}
+```
+
+自定义的序列化类：
+
+```java
+public class CustomDateSerializer extends StdSerializer<Date> {
+
+    private static SimpleDateFormat formatter 
+      = new SimpleDateFormat("dd-MM-yyyy hh:mm:ss");
+
+    public CustomDateSerializer() { 
+        this(null); 
+    } 
+
+    public CustomDateSerializer(Class<Date> t) {
+        super(t); 
+    }
+
+    @Override
+    public void serialize(Date value, JsonGenerator gen, SerializerProvider arg2) 
+      throws IOException, JsonProcessingException {
+        gen.writeString(formatter.format(value));
+    }
+}
+```
+
+测试使用
+
+```java
+@Test
+public void whenSerializingUsingJsonSerialize_thenCorrect()
+  throws JsonProcessingException, ParseException {
+ 
+    SimpleDateFormat df
+      = new SimpleDateFormat("dd-MM-yyyy hh:mm:ss");
+
+    String toParse = "20-12-2014 02:30:00";
+    Date date = df.parse(toParse);
+    EventWithSerializer event = new EventWithSerializer("party", date);
+
+    String result = new ObjectMapper().writeValueAsString(event);
+    assertThat(result, containsString(toParse));
+}
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 ## 其他注解
@@ -793,3 +1134,338 @@ String jsonString = mapper.writeValueAsString(bean);
 
 - `mapper.enableDefaultTyping(DefaultTyping.NON_FINAL)`的作用是在序列化结果中显示实体类类型属性
 - 结果是一个Json对象, 其中`"Type Id Bean"`是实体类ID的描述, `{"id":6}`是类的属性值
+
+## 反序列化注解
+
+### @JsonCreator
+
+当JSON和目标实体类不完全匹配时
+
+```json
+{
+    "id":1,
+    "theName":"My bean"
+}
+```
+
+现在，实体类中没有theName属性，只有name属性
+
+```java
+public class BeanWithCreator {
+    public int id;
+    public String name;
+
+    @JsonCreator
+    public BeanWithCreator(@JsonProperty("id") int id, @JsonProperty("theName") String name) {
+        this.id = id;
+        this.name = name;
+    }
+}
+```
+
+测试使用：
+
+```java
+@Test
+public void whenDeserializingUsingJsonCreator_thenCorrect()
+  throws IOException {
+ 
+    String json = "{\"id\":1,\"theName\":\"My bean\"}";
+
+    BeanWithCreator bean = new ObjectMapper()
+      .readerFor(BeanWithCreator.class)
+      .readValue(json);
+    assertEquals("My bean", bean.name);
+}
+```
+
+点评：其实在实体类属性上标注@JsonProperty("theName")就行了，只是@JsonCreator用在构造方法上，可以完全被@JsonProperty替代
+
+
+
+
+
+# 枚举类型处理
+
+## 枚举序列化为 JSON
+
+### 默认行为
+
+```java
+public enum Distance {
+    KILOMETER("km", 1000), 
+    MILE("miles", 1609.34),
+    METER("meters", 1), 
+    INCH("inches", 0.0254),
+    CENTIMETER("cm", 0.01), 
+    MILLIMETER("mm", 0.001);
+
+    private String unit;
+    private final double meters;
+
+    private Distance(String unit, double meters) {
+        this.unit = unit;
+        this.meters = meters;
+    }
+
+    // standard getters and setters
+}
+```
+
+**默认情况下**，Jackson 会将 Java 枚举表示为简单的字符串——例如：
+
+```java
+new ObjectMapper().writeValueAsString(Distance.MILE);
+```
+
+结果：
+
+```
+"MILE"
+```
+
+如果我们希望得到的内容如下：
+
+```json
+{"unit":"miles","meters":1609.34}
+```
+
+### JsonFormat.Shape.OBJECT
+
+从 Jackson 2.1.2 开始，现在有一个可以处理这种表示的配置选项。这可以通过类级别的@JsonFormat注解来完成：
+
+```java
+@JsonFormat(shape = JsonFormat.Shape.OBJECT)
+public enum Distance { ... }
+```
+
+得到了期望的结果：
+
+```json
+{"unit":"miles","meters":1609.34}
+```
+
+### @JsonValue
+
+在 getter 上使用@JsonValue
+
+```java
+public enum Distance { 
+    ...
+    @JsonValue
+    public String getMeters() {
+        return meters;
+    }
+}
+```
+
+序列化结果：
+
+```json
+1609.34
+```
+
+### 自定义序列化
+
+```java
+public class DistanceSerializer extends StdSerializer {
+    
+    public DistanceSerializer() {
+        super(Distance.class);
+    }
+
+    public DistanceSerializer(Class t) {
+        super(t);
+    }
+
+    public void serialize(
+      Distance distance, JsonGenerator generator, SerializerProvider provider) 
+      throws IOException, JsonProcessingException {
+        generator.writeStartObject();
+        generator.writeFieldName("name");
+        generator.writeString(distance.name());
+        generator.writeFieldName("unit");
+        generator.writeString(distance.getUnit());
+        generator.writeFieldName("meters");
+        generator.writeNumber(distance.getMeters());
+        generator.writeEndObject();
+    }
+}
+```
+
+
+
+```java
+@JsonSerialize(using = DistanceSerializer.class)
+public enum TypeEnum { ... }
+```
+
+结果：
+
+```json
+{"name":"MILE","unit":"miles","meters":1609.34}
+```
+
+## JSON 反序列化为 Enum
+
+```java
+public class City {
+    
+    private Distance distance;
+    ...    
+}
+```
+
+### 默认行为
+
+**默认情况下，Jackson 将使用 Enum 名称从 JSON 反序列化**。
+
+例如，它将反序列化 JSON：
+
+```javascript
+{"distance":"KILOMETER"}
+```
+
+到一个Distance.KILOMETER对象：
+
+```java
+City city = new ObjectMapper().readValue(json, City.class);
+assertEquals(Distance.KILOMETER, city.getDistance());
+```
+
+### @JsonValue
+
+```java
+public enum Distance {
+    ...
+
+    @JsonValue
+    public double getMeters() {
+        return meters;
+    }
+}
+```
+
+JSON:
+
+```json
+{"distance":"0.0254"}
+```
+
+Jackson 将查找getMeters()返回值为 0.0254的 Enum 对象
+
+```java
+assertEquals(Distance.INCH, city.getDistance());
+```
+
+### @JsonProperty
+
+```java
+public enum Distance {
+    @JsonProperty("distance-in-km")
+    KILOMETER("km", 1000), 
+    @JsonProperty("distance-in-miles")
+    MILE("miles", 1609.34);
+ 
+    ...
+}
+```
+
+JSON:
+
+```json
+{"distance": "distance-in-km"}
+```
+
+映射到Distance.KILOMETER对象
+
+```java
+assertEquals(Distance.KILOMETER, city.getDistance())
+```
+
+### @JsonCreator
+
+JSON:
+
+```json
+{
+    "distance": {
+        "unit":"miles", 
+        "meters":1609.34
+    }
+}
+```
+
+重写枚举类的forValues方法：
+
+```JAVA
+public enum Distance {
+   
+    @JsonCreator
+    public static Distance forValues(@JsonProperty("unit") String unit,
+      @JsonProperty("meters") double meters) {
+        for (Distance distance : Distance.values()) {
+            if (
+              distance.unit.equals(unit) && Double.compare(distance.meters, meters) == 0) {
+                return distance;
+            }
+        }
+
+        return null;
+    }
+
+    ...
+}
+```
+
+
+
+```java
+assertEquals(Distance.MILE, city.getDistance());
+```
+
+### 自定义反序列化
+
+创建反序列化类：
+
+```java
+public class CustomEnumDeserializer extends StdDeserializer<Distance> {
+
+    @Override
+    public Distance deserialize(JsonParser jsonParser, DeserializationContext ctxt)
+      throws IOException, JsonProcessingException {
+        JsonNode node = jsonParser.getCodec().readTree(jsonParser);
+
+        String unit = node.get("unit").asText();
+        double meters = node.get("meters").asDouble();
+
+        for (Distance distance : Distance.values()) {
+           
+            if (distance.getUnit().equals(unit) && Double.compare(
+              distance.getMeters(), meters) == 0) {
+                return distance;
+            }
+        }
+
+        return null;
+    }
+}
+```
+
+在 Enum 上使用@JsonDeserialize来引入自定义的反序列化类：
+
+```java
+@JsonDeserialize(using = CustomEnumDeserializer.class)
+public enum Distance {
+   ...
+}
+```
+
+结果：
+
+```java
+assertEquals(Distance.MILE, city.getDistance());
+```
+
+
+
