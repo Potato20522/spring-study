@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.potato</groupId>
+    <artifactId>manifold</artifactId>
+    <version>1.0-SNAPSHOT</version>
+
+    <properties>
+        <maven.compiler.source>8</maven.compiler.source>
+        <maven.compiler.target>8</maven.compiler.target>
+        <manifold-version>2021.1.25</manifold-version>
+    </properties>
+    <dependencies>
+        <dependency>
+            <groupId>systems.manifold</groupId>
+            <artifactId>manifold-ext-rt</artifactId>
+            <version>2021.1.24</version>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+            <version>1.18.20</version>
+        </dependency>
+    </dependencies>
+    <build>
+        <plugins>
+
+            <!--
+             Configure the maven-compiler-plugin use Manifold.
+             - add the -Xplugin:Manifold argument for the javac compiler
+             - add compile-time manifold modules to javac -processorpath arg
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+
+                <!-- version 3.8.0+ is necessary to support Java 10+ -->
+                <version>3.8.0</version>
+
+                <configuration>
+                    <encoding>UTF-8</encoding>
+                    <compilerArgs>
+                        <!--Add the Manifold plugin-->
+                        <arg>-Xplugin:Manifold</arg>
+                    </compilerArgs>
+
+                    <!-- Add Manifold compile-time dependencies in the processor path -->
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>systems.manifold</groupId>
+                            <artifactId>manifold-preprocessor</artifactId>
+                            <version>${manifold-version}</version>
+                        </path>
+                        <path>
+                            <groupId>systems.manifold</groupId>
+                            <artifactId>manifold-strings</artifactId>
+                            <version>${manifold-version}</version>
+                        </path>
+                    </annotationProcessorPaths>
+
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>
