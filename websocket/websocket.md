@@ -2,11 +2,15 @@
 
 [WebSocket 详解教程 - 静默虚空 - 博客园 (cnblogs.com)](https://www.cnblogs.com/jingmoxukong/p/7755643.html)
 
+[SpringBoot 实现 Websocket 通信详解 | 超级小豆丁 (mydlq.club)](http://www.mydlq.club/article/86/#一websocket-简介)
+
 ## WebSocket 是什么
 
 [WebSocket](http://websocket.org/) 是一种网络通信协议。[RFC6455](https://tools.ietf.org/html/rfc6455) 定义了它的通信标准。
 
 WebSocket 是 HTML5 开始提供的一种在单个 TCP 连接上进行全双工通讯的协议。
+
+![img](img/websocket.assets/springboot-websocket-1002.png)
 
 ## 为什么需要WebSocket 
 
@@ -14,9 +18,13 @@ WebSocket 是 HTML5 开始提供的一种在单个 TCP 连接上进行全双工�
 
 这种通信模型有一个弊端：**HTTP 协议无法实现服务器主动向客户端发起消息**。
 
+场景："聊天室"、"消息推送"、"股票信  息实时动态"等需求
+
 这种单向请求的特点，注定了如果服务器有连续的状态变化，客户端要获知就非常麻烦。大多数 Web 应用程序将通过**频繁的异步 JavaScript 和 XML（AJAX）请求实现长轮询**。轮询的效率低，非常浪费资源（因为必须不停连接，或者 HTTP 连接始终打开）。
 
 因此，工程师们一直在思考，有没有更好的方法。WebSocket 就是这样发明的。WebSocket 连接允许客户端和服务器之间进行**全双工通信**，以便任一方都可以通过建立的连接将数据推送到另一端。WebSocket 只需要**建立一次连接，就可以一直保持连接状态**。这相比于轮询方式的不停建立连接显然效率要大大提高。
+
+![img](img/websocket.assets/springboot-websocket-1003.png)
 
 
 
@@ -28,17 +36,19 @@ Web 浏览器和服务器都必须实现 WebSockets 协议来建立和维护连�
 
 ## 特点
 
-[WebSocket 详解 - 知乎 (zhihu.com)](https://zhuanlan.zhihu.com/p/97883095)（1）建立在 TCP 协议之上，服务器端的实现比较容易。
+[WebSocket 详解 - 知乎 (zhihu.com)](https://zhuanlan.zhihu.com/p/97883095)
 
-（2）与 HTTP 协议有着良好的兼容性。默认端口也是80和443，并且握手阶段采用 HTTP 协议，因此握手时不容易屏蔽，能通过各种 HTTP 代理服务器。
+（1）**建立在 TCP 协议之上**，服务器端的实现比较容易。
+
+（2）与 HTTP 协议有着良好的兼容性。默认端口也是80和443，并且**握手阶段采用 HTTP 协议**，因此握手时不容易屏蔽，能通过各种 HTTP 代理服务器。
 
 （3）数据格式比较轻量，性能开销小，通信高效。
 
-（4）可以发送文本，也可以发送二进制数据。
+（4）**可以发送文本，也可以发送二进制数据**。
 
-（5）没有同源限制，客户端可以与任意服务器通信。
+（5）**没有同源限制**，客户端可以与任意服务器通信。
 
-（6）协议标识符是ws（如果加密，则为wss），服务器网址就是 URL。
+（6）**协议标识符是ws（如果加密，则为wss），服务器网址就是 URL**。
 
 ## WebSocket 和 HTTP 的关系
 
@@ -88,6 +98,50 @@ Sec-WebSocket-Accept:s3pPLMBiTxaQ9kYGzzhZRbK+xOo=
 经过学习和理解，我认为有两点：
 
 第一，WebSocket设计上就是天生为HTTP增强通信（全双工通信等），所以在HTTP协议连接的基础上是很自然的一件事，并因此而能获得HTTP的诸多便利。第二，这诸多便利中有一条很重要，基于HTTP连接将获得最大的一个兼容支持，比如即使服务器不支持WebSocket也能建立HTTP通信，只不过返回的是onerror而已，这显然比服务器无响应要好的多。
+
+# WebSocket 连接流程
+
+**(1)、客户端先用带有 Upgrade:Websocket 请求头的 HTTP 请求，向服务器端发起连接请求，实现握手(HandShake)。**
+
+客户端 **HTTP 请求**的 Header 头信息如下：
+
+```
+Connection: Upgrade
+Sec-WebSocket-Extensions: permessage-deflate; client_max_window_bits
+Sec-WebSocket-Key: IRQYhWINfX5Fh1zdocDl6Q==
+Sec-WebSocket-Version: 13
+Upgrade: websocket
+```
+
+- **Connection：** Upgrade 表示要升级协议。
+- **Upgrade：** Websocket 要升级协议到 websocket 协议。
+- **Sec-WebSocket-Extensions：** 表示客户端所希望执行的扩展(如消息压缩插件)。
+- **Sec-WebSocket-Key：** 主要用于WebSocket协议的校验，对应服务端响应头的 Sec-WebSocket-Accept。
+- **Sec-WebSocket-Version：** 表示 websocket 的版本。如果服务端不支持该版本，需要返回一个Sec-WebSocket-Versionheader，里面包含服务端支持的版本号。
+
+**(2)、握手成功后，由 HTTP 协议升级成 Websocket 协议，进行长连接通信，两端相互传递信息。**
+
+```
+Connection: upgrade
+Sec-Websocket-Accept: TSF8/KitM+yYRbXmjclgl7DwbHk=
+Upgrade: websocket
+```
+
+- **Connection：** Upgrade 表示要升级协议。
+- **Upgrade：** Websocket 要升级协议到 websocket 协议。
+- **Sec-Websocket-Accept：** 对应 Sec-WebSocket-Key 生成的值，主要是返回给客户端，让客户端对此值进行校验，证明服务端支持 WebSocket。
+
+## WebSocket 中子协议支持
+
+ WebSocket 确实指定了一种消息传递体系结构，但并不强制使用任何特定的消息传递协议。而且它是 TCP 上的一个非常薄的层，它将字节流转换为消息流（文本或二进制）仅此而已。由应用程序来解释消息的含义。
+
+与 HTTP（它是应用程序级协议）不同，在 WebSocket 协议中，**传入消息中根本没有足够的信息供框架或容器知道如何路由或处理它**。因此，对于非常琐碎的应用程序而言 WebSocket 协议的级别可以说太低了。**可以做到的是引导在其上面再创建一层框架。这就相当于当今大多数 Web 应用程序使用的是 Web 框架，而不直接仅使用 Servlet API 进行编码一样**。
+
+WebSocket RFC 定义了子协议的使用。在握手过程中，客户机和服务器可以使用头 Sec-WebSocket 协议商定子协议，即使不需要使用子协议，而是用更高的应用程序级协议，但应用程序仍需要选择客户端和服务器都可以理解的消息格式。且该格式可以是自定义的、特定于框架的或标准的消息传递协议。
+
+Spring 框架支持使用 STOMP，这是一个简单的消息传递协议，最初创建用于脚本语言，框架灵感来自 HTTP。STOMP 被广泛支持，非常适合在 WebSocket 和 web 上使用。
+
+
 
 # 长连接的原理
 

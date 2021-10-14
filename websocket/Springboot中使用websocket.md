@@ -53,8 +53,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * @author buhao
- * @version WsServerEndpoint.java, v 0.1 2019-10-18 16:06 buhao
+ *  @ServerEndpoint 注解是一个类层次的注解，它的功能主要是将目前的类定义成一个websocket服务器端,
  */
 @ServerEndpoint("/myWs")
 @Component
@@ -308,7 +307,7 @@ public class WebSocketConfig implements WebSocketConfigurer {
 
 通过实现  **WebSocketConfigurer** 类并覆盖相应的方法进行 **websocket** 的配置。我们主要覆盖  **registerWebSocketHandlers** 这个方法。通过向  **WebSocketHandlerRegistry** 设置不同参数来进行配置。其中 **addHandler **方法添加我们上面的写的 ws 的   handler 处理类，第二个参数是你暴露出的 ws 路径。**addInterceptors **添加我们写的握手过滤器。**setAllowedOrigins("*") **这个是关闭跨域校验，方便本地调试，线上推荐打开。
 
-# TIO
+# TIO(半开源，文档收费)
 
 ```xml
  <dependency>
