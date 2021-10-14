@@ -1,0 +1,1 @@
+- 制定订阅的路径进行广播推送：@MessageMapping("/hello")

@@ -363,3 +363,305 @@ function sendMessageNoParameter() {
 </dependency>
 ```
 
+## 创建测试实体类
+
+```java
+import lombok.Data;
+
+@Data
+public class MessageBody {
+    /** 发送消息的用户 */
+    private String from;
+    /** 消息内容 */
+    private String content;
+    /** 目标用户（告知 STOMP 代理转发到哪个用户） */
+    private String targetUser;
+    /** 广播转发的目标地址（告知 STOMP 代理转发到哪个地方） */
+    private String destination;
+}
+
+```
+
+## 创建 WebSocket 配置类
+
+创建 WebSocket 配置类，配置进行连接注册的端点 `/mydlq` 和消息代理前缀 `/queue` 及接收客户端发送消息的前缀 `/app`。
+
+```java
+import org.springframework.context.annotation.Configuration;
+import org.springframework.messaging.simp.config.MessageBrokerRegistry;
+import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
+import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
+import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
+
+@Configuration
+@EnableWebSocketMessageBroker
+public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
+
+    /**
+     * 配置 WebSocket 进入点，及开启使用 SockJS，这些配置主要用配置连接端点，用于 WebSocket 连接
+     *
+     * @param registry STOMP 端点
+     */
+    @Override
+    public void registerStompEndpoints(StompEndpointRegistry registry) {
+        registry.addEndpoint("/mydlq").withSockJS();
+    }
+
+    /**
+     * 配置消息代理选项
+     *
+     * @param registry 消息代理注册配置
+     */
+    @Override
+    public void configureMessageBroker(MessageBrokerRegistry registry) {
+        // 设置一个或者多个代理前缀，在 Controller 类中的方法里面发生的消息，会首先转发到代理从而发送到对应广播或者队列中。
+        registry.enableSimpleBroker("/queue");
+        // 配置客户端发送请求消息的一个或多个前缀，该前缀会筛选消息目标转发到 Controller 类中注解对应的方法里
+        registry.setApplicationDestinationPrefixes("/app");
+        // 服务端通知特定用户客户端的前缀，可以不设置，默认为user
+        registry.setUserDestinationPrefix("/user");
+    }
+
+}
+
+```
+
+## 创建 Security 配置
+
+Spring Security 的配置类，可以在该类中配置权限认证及测试的两个用户相关信息：
+
+- 测试用户名/密码1：mydlq1/123456
+- 测试用户名/密码2：mydlq2/123456
+
+```java
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.crypto.password.NoOpPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+
+@Configuration
+public class SecurityConfig extends WebSecurityConfigurerAdapter {
+
+    /**
+     * 设置密码编码的配置参数，这里设置为 NoOpPasswordEncoder，不配置密码加密，方便测试。
+     *
+     * @return 密码编码实例
+     */
+    @Bean
+    PasswordEncoder passwordEncoder() {
+        return NoOpPasswordEncoder.getInstance();
+    }
+
+    /**
+     * 设置权限认证参数，这里用于创建两个用于测试的用户信息。
+     *
+     * @param auth SecurityBuilder 用于创建 AuthenticationManager。
+     * @throws Exception 抛出的异常
+     */
+    @Override
+    protected void configure(AuthenticationManagerBuilder auth) throws Exception {
+        auth.inMemoryAuthentication()
+                .withUser("mydlq1")
+                .password("123456")
+                .roles("admin")
+                .and()
+                .withUser("mydlq2")
+                .password("123456")
+                .roles("admin");
+    }
+
+    /**
+     * 设置 HTTP 安全相关配置参数
+     *
+     * @param http HTTP Security 对象
+     * @throws Exception 抛出的异常信息
+     */
+    @Override
+    protected void configure(HttpSecurity http) throws Exception {
+        http.authorizeRequests()
+                .anyRequest().authenticated()
+                .and()
+                .formLogin()
+                .permitAll();
+    }
+
+}
+
+```
+
+## 创建测试 Controller 类
+
+跟上面介绍广播模式一样，作用也是根据 WebSocket 配置类中 /app 前缀匹配后进入 Controller 类进行逻辑处理操作。
+
+```java
+import mydlq.club.example.model.MessageBody;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.messaging.handler.annotation.MessageMapping;
+import org.springframework.messaging.simp.SimpMessageSendingOperations;
+import org.springframework.stereotype.Controller;
+import java.security.Principal;
+
+@Controller
+public class MessageController {
+
+    @Autowired
+    private SimpMessageSendingOperations simpMessageSendingOperations;
+
+    /**
+     * 点对点发送消息，将消息发送到指定用户
+     */
+    @MessageMapping("/test")
+    public void sendUserMessage(Principal principal, MessageBody messageBody) {
+        // 设置发送消息的用户
+        messageBody.setFrom(principal.getName());
+        // 调用 STOMP 代理进行消息转发
+        simpMessageSendingOperations.convertAndSendToUser(messageBody.getTargetUser(), messageBody.getDestination(), messageBody);
+    }
+
+}
+
+```
+
+## 创建测试的前端 html 和 js
+
+**(1)、创建 WebSocket JS**
+
+创建用于操作 WebSocket 的 JS 文件 app-websocket.js，内容如下：
+
+```js
+// 设置 STOMP 客户端
+var stompClient = null;
+// 设置 WebSocket 进入端点
+var SOCKET_ENDPOINT = "/mydlq";
+// 设置订阅消息的请求前缀
+var SUBSCRIBE_PREFIX = "/topic"
+// 设置订阅消息的请求地址
+var SUBSCRIBE = "";
+// 设置服务器端点，访问服务器中哪个接口
+var SEND_ENDPOINT = "/app/test";
+
+/* 进行连接 */
+function connect() {
+    // 设置 SOCKET
+    var socket = new SockJS(SOCKET_ENDPOINT);
+    // 配置 STOMP 客户端
+    stompClient = Stomp.over(socket);
+    // STOMP 客户端连接
+    stompClient.connect({}, function (frame) {
+        alert("连接成功");
+    });
+}
+
+/* 订阅信息 */
+function subscribeSocket(){
+    // 设置订阅地址
+    SUBSCRIBE = SUBSCRIBE_PREFIX + $("#subscribe").val();
+    // 输出订阅地址
+    alert("设置订阅地址为：" + SUBSCRIBE);
+    // 执行订阅消息
+    stompClient.subscribe(SUBSCRIBE, function (responseBody) {
+        var receiveMessage = JSON.parse(responseBody.body);
+        $("#information").append("<tr><td>" + receiveMessage.content + "</td></tr>");
+    });
+}
+
+/* 断开连接 */
+function disconnect() {
+    stompClient.disconnect(function() {
+        alert("断开连接");
+    });
+}
+
+/* 发送消息并指定目标地址 */
+function sendMessageNoParameter() {
+    // 设置发送的内容
+    var sendContent = $("#content").val();
+    // 设置待发送的消息内容
+    var message = '{"destination": "' + SUBSCRIBE + '", "content": "' + sendContent + '"}';
+    // 发送消息
+    stompClient.send(SEND_ENDPOINT, {}, message);
+}
+
+```
+
+**(2)、创建 WebSocket HTML**
+
+创建用于展示 WebSocket 相关功能的 WEB HTML 页面 index.html，内容如下：
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Hello WebSocket</title>
+    <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/3.4.1/css/bootstrap.min.css" rel="stylesheet">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+    <script src="https://cdn.bootcdn.net/ajax/libs/jquery/3.5.1/jquery.js"></script>
+    <script src="https://cdn.bootcdn.net/ajax/libs/sockjs-client/1.4.0/sockjs.min.js"></script>
+    <script src="https://cdn.bootcdn.net/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <script src="app-websocket.js"></script>
+</head>
+<body>
+<div id="main-content" class="container" style="margin-top: 10px;">
+    <div class="row">
+        <form class="navbar-form" style="margin-left:0px">
+            <div class="col-md-12">
+                <div class="form-group">
+                    <label>WebSocket 连接：</label>
+                    <button class="btn btn-primary" type="button" onclick="connect();">进行连接</button>
+                    <button class="btn btn-danger" type="button" onclick="disconnect();">断开连接</button>
+                </div>
+                <label>订阅地址：</label>
+                <div class="form-group">
+                    <input type="text" id="subscribe" class="form-control" placeholder="订阅地址">
+                </div>
+                <button class="btn btn-warning" onclick="subscribeSocket();" type="button">订阅</button>
+            </div>
+        </form>
+    </div>
+    </br>
+    <div class="row">
+        <div class="form-group">
+            <label>发送的目标用户：</label>
+            <input type="text" id="targetUser" class="form-control" placeholder="发送的用户">
+            <label for="content">发送的消息内容：</label>
+            <input type="text" id="content" class="form-control" placeholder="消息的内容">
+        </div>
+        <button class="btn btn-info" onclick="sendMessageNoParameter();" type="button">发送</button>
+    </div>
+    </br>
+    <div class="row">
+        <div class="col-md-12">
+            <h5 class="page-header" style="font-weight:bold">接收到的消息：</h5>
+            <table class="table table-striped">
+                <tbody id="information"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+</body>
+</html>
+```
+
+## 启动并进行测试
+
+为了方便测试，需要打开两个不同类型浏览器（因为用户登录后会存 Session，如果一个浏览器不同用户登录会使之前 Session 失效）来进行测试，两个浏览器同时输入地址 http://localhost:8080/index.html 访问测试的前端页面，然后可以看到并没有进入 `/index.html` 页面，而是跳转到 Spring Security 提供的登录的 `/login` 页面，如下：
+
+- 浏览器1登录的用户：mydlq1，密码：123456
+- 浏览器2登录的用户：mydlq2，密码：123456
+
+![img](img/SpringBoot与STOMP.assets/springboot-websocket-1006.png)
+
+两个浏览器中都输入用户名/密码 `mydlq1/123456` 与 `mydlq2/123456` 进行登录，然后会回到 `/index.html` 页面，然后执行下面步骤进行测试：
+
+- (1)、"浏览器1"和"浏览器2"点击"进行连接"按钮，连接 WebSocket 服务端；
+- (2)、"浏览器1"和"浏览器2"中同时设置订阅地址为"/abc"，然后点击订阅按钮进行消息订阅；
+- (3)、"浏览器1"(用户 mydlq1)设置发送目标用户为"/mydlq2"，"浏览器2"(用户 mydlq2)设置发送目标用户为"/mydlq1"；
+- (4)、"浏览器1"(用户 mydlq1)设置发送消息为"Hi, I'm mydlq1"，"浏览器2"(用户 mydlq2)设置发送消息为"Hi, I'm mydlq2"；
+- (5)、点击"发送"按钮发送消息；
+
+执行完上面步骤成后，可以在两个不同浏览器中观察到如下内容：
+
+![img](img/SpringBoot与STOMP.assets/springboot-websocket-1007.png)
