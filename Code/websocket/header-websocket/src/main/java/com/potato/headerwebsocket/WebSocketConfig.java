@@ -1,11 +1,11 @@
-package com.potato.securitywebsocket;
+package com.potato.headerwebsocket;
 
 import org.springframework.context.annotation.Configuration;
+import org.springframework.messaging.simp.config.ChannelRegistration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
-import org.springframework.web.socket.config.annotation.WebSocketTransportRegistration;
 
 @Configuration
 @EnableWebSocketMessageBroker
@@ -37,11 +37,13 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     }
 
     /**
-     * 添加 WebSocket 用户上、下线监听器
+     * 配置通道拦截器，用于获取 Header 的 Token 进行鉴权
+     *
+     * @param registration 注册通道配置类
      */
     @Override
-    public void configureWebSocketTransport(WebSocketTransportRegistration registry) {
-        registry.addDecoratorFactory(new HttpWebSocketHandlerDecoratorFactory());
+    public void configureClientInboundChannel(ChannelRegistration registration) {
+        registration.interceptors(new MyChannelInterceptor());
     }
 
 }
