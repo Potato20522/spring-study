@@ -16,8 +16,10 @@ function connect() {
     var socket = new SockJS(SOCKET_ENDPOINT);
     // 配置 STOMP 客户端
     stompClient = Stomp.over(socket);
+    // 获取 TOKEN
+    var myToken = $("#myToken").val();
     // STOMP 客户端连接
-    stompClient.connect({}, function (frame) {
+    stompClient.connect({token: myToken}, function (frame) {
         alert("连接成功");
     });
 }
