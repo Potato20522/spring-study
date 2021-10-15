@@ -1658,3 +1658,93 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
 ```
 
+# WebSocket作用域
+
+文档：[Web on Servlet Stack (spring.io)](https://docs.spring.io/spring-framework/docs/current/reference/html/web.html#websocket-stomp-websocket-scope)
+
+每个WebSocket session都有一个Map对象，里面存放了很多属性，这些属性是客户端发的请求头里的属性，可以从controller方法里访问
+
+```java
+@Controller
+public class MyController {
+
+    @MessageMapping("/action")
+    public void handle(SimpMessageHeaderAccessor headerAccessor) {
+        Map<String, Object> attrs = headerAccessor.getSessionAttributes();
+        // ...
+    }
+}
+```
+
+可以在WebSocket作用域中声明一个bean，可以将WebSocket作用域的bean注入控制器和在clientInboundChannel上注册的任何通道拦截器。这些都是典型的单例，比任何单独的WebSocket会话都要长。因此，需要为这个bean设置代理模式，如下例所示：
+
+```java
+@Component
+@Scope(scopeName = "websocket", proxyMode = ScopedProxyMode.TARGET_CLASS)
+public class MyBean {
+
+    @PostConstruct
+    public void init() {
+        // Invoked after dependencies injected
+    }
+
+    // ...
+
+    @PreDestroy
+    public void destroy() {
+        // Invoked when the WebSocket session ends
+    }
+}
+
+@Controller
+public class MyController {
+
+    private final MyBean myBean;
+
+    @Autowired
+    public MyController(MyBean myBean) {
+        this.myBean = myBean;
+    }
+
+    @MessageMapping("/action")
+    public void handle() {
+        // this.myBean from the current WebSocket session
+    }
+}
+```
+
+与任何自定义作用域一样，Spring在第一次从controller访问新的MyBean实例时初始化该实例，并将该实例存储在WebSocket会话属性中。随后将返回相同的实例，直到
+
+结束。WebSocket范围的bean调用了所有Spring生命周期方法，如前面的示例所示。
+
+# 设置
+
+## 心跳
+
+[Web on Servlet Stack (spring.io)](https://docs.spring.io/spring-framework/docs/current/reference/html/web.html#websocket-stomp-handle-simple-broker)
+
+```java
+@Configuration
+@EnableWebSocketMessageBroker
+public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
+    
+    private TaskScheduler messageBrokerTaskScheduler;
+    //z
+    @Autowired
+    public void setMessageBrokerTaskScheduler(TaskScheduler taskScheduler) {
+        this.messageBrokerTaskScheduler = taskScheduler;
+    }
+
+    @Override
+    public void configureMessageBroker(MessageBrokerRegistry registry) {
+
+        registry.enableSimpleBroker("/queue/", "/topic/")
+            //客户端10s发一次，服务端20s发一次
+                .setHeartbeatValue(new long[] {10000, 20000})
+                .setTaskScheduler(this.messageBrokerTaskScheduler);//传入定时任务
+
+        // ...
+    }
+}
+```
+
