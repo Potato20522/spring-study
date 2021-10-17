@@ -19,6 +19,7 @@ public class HttpWebSocketHandlerDecoratorFactory implements WebSocketHandlerDec
     @Override
     public WebSocketHandler decorate(WebSocketHandler webSocketHandler) {
         return new WebSocketHandlerDecorator(webSocketHandler) {
+
             /**
              * websocket 连接时执行的动作
              * @param session    websocket session 对象

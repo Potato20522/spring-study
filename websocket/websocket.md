@@ -730,3 +730,45 @@ Hello queue a
 
 每当服务端收到来自客户端的需要`receipt`的帧时发送给客户端
 
+# Websocket请求、响应头字段
+
+## 请求头
+
+### Sec-WebSocket-Key
+
+```
+Sec-WebSocket-Key: TIr4tOcpik8ELY5dP8XKmw==
+```
+
+Sec-WebSocket-Key是客户端也就是浏览器或者其他终端随机生成一组16位的随机base64编码的串
+
+websocket-client 这个库里面找到的生成这个key的函数：
+
+```python
+def _create_sec_websocket_key():
+    randomness = os.urandom(16)
+    return base64encode(randomness).decode('utf-8').strip()
+```
+
+## 响应头
+
+### Sec-Websocket-Accept
+
+服务器在接受到握手请求后，会返回一个response 头包完成握手。
+
+由Sec-Websocket-Accept的key完成校验
+
+贴一个生成的Sec-Websocket-Accept的代码：
+
+```python
+def compute_accept_value(key):
+        """Computes the value for the Sec-WebSocket-Accept header,
+        given the value for Sec-WebSocket-Key.
+        """
+        sha1 = hashlib.sha1()
+        sha1.update(utf8(key))
+        sha1.update(b"258EAFA5-E914-47DA-95CA-C5AB0DC85B11")  # Magic value
+        return native_str(base64.b64encode(sha1.digest()))
+```
+
+这个入参key就是客户端发上来的Sec_key。 然后服务器进行sha1计算并且拼上一个GUID RFC6455中可以找到这个字符串。然后进行base64encode返回给客户端。客户端拿到后拿自己的key做同样的加密，如果对得上握手完成。到此为止就可以开始愉快的使用websocket进行交流了！

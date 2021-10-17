@@ -2,20 +2,18 @@
 var stompClient = null;
 
 // 设置 WebSocket 进入端点
-var SOCKET_ENDPOINT = "/mydlq";
+var SOCKET_ENDPOINT = "/ws";
 // 设置订阅消息的请求地址前缀
 var SUBSCRIBE_PREFIX  = "/queue";
 // 设置订阅地址
 var SUBSCRIBE = "";
 // 设置服务器端点，访问服务器中哪个接口
-var SEND_ENDPOINT = "/app/test";
+var SEND_ENDPOINT = "/app/marco";
 
 /* 进行连接 */
 function connect() {
-    // 设置 SOCKET
-    // var socket = new SockJS(SOCKET_ENDPOINT);
     // 配置 STOMP 客户端
-    stompClient = Stomp.over(new WebSocket("ws://localhost:8080/mydlq"));
+    stompClient = Stomp.over(new WebSocket("ws://localhost:8080"+SOCKET_ENDPOINT));
     // STOMP 客户端连接
     stompClient.connect({}, function (frame) {
         console.log("frame:", frame);
@@ -26,13 +24,15 @@ function connect() {
 /* 订阅信息 */
 function subscribeSocket(){
     // 设置订阅地址
-    SUBSCRIBE = SUBSCRIBE_PREFIX + $("#subscribe").val();
+    // SUBSCRIBE = SUBSCRIBE_PREFIX + $("#subscribe").val();
+    SUBSCRIBE = "/queue/marco";
     // 输出订阅地址
-    alert("设置订阅地址为：" + SUBSCRIBE);
-    // 执行订阅消息
-    stompClient.subscribe("/user" + SUBSCRIBE, function (responseBody) {
+    console.log("设置订阅地址为：" + SUBSCRIBE);
+    // 执行订阅消息/
+    // stompClient.subscribe("/user" + SUBSCRIBE, function (responseBody) {
+    stompClient.subscribe(SUBSCRIBE, function (responseBody) {
         var receiveMessage = JSON.parse(responseBody.body);
-        console.log(receiveMessage);
+        console.log("订阅收到的消息:"+SUBSCRIBE,receiveMessage);
         $("#information").append("<tr><td>" + receiveMessage.content + "</td></tr>");
     });
 }
@@ -51,7 +51,9 @@ function sendMessageNoParameter() {
     // 设置发送的用户
     var sendUser = $("#targetUser").val();
     // 设置待发送的消息内容
-    var message = '{"targetUser":"' + sendUser + '", "destination": "' + SUBSCRIBE + '", "content": "' + sendContent + '"}';
+    var message = 'from:'+''+ '{"targetUser":"' + sendUser + '", "content": "' + sendContent + '"}';
     // 发送消息
+    SEND_ENDPOINT="/app/marco"
+    console.log("发送的地址:",SEND_ENDPOINT)
     stompClient.send(SEND_ENDPOINT, {}, message);
 }

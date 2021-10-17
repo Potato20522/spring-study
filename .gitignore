@@ -67,3 +67,7 @@ fabric.properties
 .idea
 
 /SpringSecurity/资料
+.mvn
+mvnw
+mvnw*
+
