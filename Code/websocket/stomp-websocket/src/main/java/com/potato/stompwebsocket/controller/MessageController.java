@@ -1,7 +1,10 @@
-package com.potato.stompwebsocket;
+package com.potato.stompwebsocket.controller;
 
+import com.potato.stompwebsocket.entity.Shout;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.messaging.MessageHeaders;
+import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.handler.annotation.SendTo;
@@ -10,8 +13,6 @@ import org.springframework.messaging.simp.annotation.SendToUser;
 import org.springframework.messaging.simp.annotation.SubscribeMapping;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RestController;
 
 import java.security.Principal;
 
@@ -24,7 +25,7 @@ public class MessageController {
 
     @MessageMapping("/marco") //隐含前缀:/app
     @SendTo("/topic/marco") //发向客户端的路径（要写全）,客户端需要订阅这个路径
-    public Shout stompHandle(Shout shout){
+    public Shout stompHandle(Shout shout) {
         log.info("接收到消息：" + shout.getMessage());
         Shout s = new Shout();
         s.setMessage("Polo!");
@@ -33,7 +34,7 @@ public class MessageController {
     }
 
     @SubscribeMapping("/getShout")
-    public Shout getShout(){
+    public Shout getShout() {
         Shout shout = new Shout();
         shout.setMessage("Hello STOMP");
         return shout;//返回值不走代理，直接到客户端订阅方法的回调里
@@ -41,6 +42,7 @@ public class MessageController {
 
     /**
      * 广播消息，不指定用户，所有订阅此的用户都能收到消息
+     *
      * @param shout
      */
     @MessageMapping("/broadcastShout")
@@ -64,5 +66,13 @@ public class MessageController {
         Principal user = stompHeaderAccessor.getUser();
 
         simpMessageSendingOperations.convertAndSendToUser(user.getName(), "/queue/shouts", shout);
+    }
+
+    @MessageMapping("/haha") //app
+    @SendToUser("/topic/hoho") //user
+    public String testSendToUser(MessageHeaders messageHeaders, @Payload String message, @Header("simpSessionId") String sessionId) {
+        log.info("testSendToUser:{}", message);
+        simpMessageSendingOperations.convertAndSend("/hoho-" + sessionId, message + "from server!!!");
+        return message + " from server";
     }
 }

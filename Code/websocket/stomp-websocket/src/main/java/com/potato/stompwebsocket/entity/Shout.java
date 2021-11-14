@@ -1,4 +1,4 @@
-package com.potato.stompwebsocket;
+package com.potato.stompwebsocket.entity;
 
 import lombok.Data;
 

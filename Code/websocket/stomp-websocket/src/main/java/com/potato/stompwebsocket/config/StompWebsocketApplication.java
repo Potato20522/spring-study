@@ -1,4 +1,4 @@
-package com.potato.stompwebsocket;
+package com.potato.stompwebsocket.config;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

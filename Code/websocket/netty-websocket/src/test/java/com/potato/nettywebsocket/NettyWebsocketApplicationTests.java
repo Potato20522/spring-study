@@ -8,6 +8,7 @@ class NettyWebsocketApplicationTests {
 
     @Test
     void contextLoads() {
+        
     }
 
 }

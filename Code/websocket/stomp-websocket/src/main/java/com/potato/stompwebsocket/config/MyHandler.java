@@ -1,4 +1,4 @@
-package com.potato.stompwebsocket;
+package com.potato.stompwebsocket.config;
 
 import org.springframework.web.socket.WebSocketHandler;
 import org.springframework.web.socket.WebSocketSession;

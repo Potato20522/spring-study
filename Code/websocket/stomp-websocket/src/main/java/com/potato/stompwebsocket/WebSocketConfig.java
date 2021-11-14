@@ -35,7 +35,7 @@ import java.util.Map;
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     //设置心跳为10秒
-    private static long HEART_BEAT=10000;
+    private static long HEART_BEAT=100000;
     /**
      * 配置 WebSocket 进入点，及开启使用 SockJS，这些配置主要用配置连接端点，用于 WebSocket 连接
      *
@@ -43,7 +43,8 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
      */
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
-        registry.addEndpoint("/stomp")
+        registry.addEndpoint("/ws")
+//                .setHandshakeHandler(new MyHandshakeHandler())
                 .addInterceptors(new HttpSessionHandshakeInterceptor()).setAllowedOrigins("*");
     }
 
@@ -53,9 +54,9 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
      */
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry) {
-        registry.enableSimpleBroker("/queue", "/topic")
+        registry.enableSimpleBroker("/queue", "/topic","/user")
                 .setHeartbeatValue(new long[]{HEART_BEAT,HEART_BEAT}).setTaskScheduler(new DefaultManagedTaskScheduler());
-        registry.setApplicationDestinationPrefixes("/app", "/foo");
+        registry.setApplicationDestinationPrefixes("/app");
         registry.setUserDestinationPrefix("/user");
     }
 

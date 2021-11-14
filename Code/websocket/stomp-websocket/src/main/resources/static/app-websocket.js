@@ -16,8 +16,11 @@ function connect() {
     stompClient = Stomp.over(new WebSocket("ws://localhost:8080"+SOCKET_ENDPOINT));
     // STOMP 客户端连接
     stompClient.connect({}, function (frame) {
-        console.log("frame:", frame);
+        console.log("connect frame:", frame);
         alert("连接成功");
+        stompClient.subscribe("/user/hoho-",(message)=>{
+            console.log("message:", message.body);
+        })
     });
 }
 
@@ -56,4 +59,11 @@ function sendMessageNoParameter() {
     SEND_ENDPOINT="/app/marco"
     console.log("发送的地址:",SEND_ENDPOINT)
     stompClient.send(SEND_ENDPOINT, {}, message);
+}
+
+function send2() {
+    // 设置发送的内容
+    var message = $("#content2").val();
+
+    stompClient.send("/app/haha", {}, message);
 }
