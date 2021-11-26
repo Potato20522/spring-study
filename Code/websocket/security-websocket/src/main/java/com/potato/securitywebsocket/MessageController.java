@@ -20,6 +20,7 @@ public class MessageController {
     @MessageMapping("/test") //接收客户端发的路径
     public void sendUserMessage(Principal principal, MessageBody messageBody) {
         // 设置发送消息的用户
+
         messageBody.setFrom(principal.getName());
         log.info(messageBody.getContent());
         // 调用 STOMP 代理进行消息转发

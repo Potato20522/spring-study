@@ -49,6 +49,7 @@ function sendMessageNoParameter() {
     var sendContent = $("#content").val();
     // 设置发送的用户
     var sendUser = $("#targetUser").val();
+    console.log('targetUser:',sendUser);
     // 设置待发送的消息内容
     var message = '{"targetUser":"' + sendUser + '", "destination": "' + SUBSCRIBE + '", "content": "' + sendContent + '"}';
     // 发送消息
