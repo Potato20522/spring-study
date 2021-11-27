@@ -13,11 +13,12 @@ var SEND_ENDPOINT = "/app/test";
 /* 进行连接 */
 function connect() {
     // 设置 SOCKET
-    var socket = new SockJS(SOCKET_ENDPOINT);
+    // var socket = new SockJS(SOCKET_ENDPOINT);
     // 配置 STOMP 客户端
-    stompClient = Stomp.over(socket);
+    stompClient = Stomp.over(new WebSocket("ws://localhost:8080/mydlq"));
     // STOMP 客户端连接
     stompClient.connect({}, function (frame) {
+        console.log("frame:", frame);
         alert("连接成功");
     });
 }
