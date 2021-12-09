@@ -494,7 +494,7 @@ public JdbcBatchItemWriter<Person> writer(DataSource dataSource) {
 @Bean
 public Job importUserJob(JobCompletionNotificationListener listener, Step step1) {
   return jobBuilderFactory.get("importUserJob")
-    .incrementer(new RunIdIncrementer()) //z
+    .incrementer(new RunIdIncrementer()) //执行策略？
     .listener(listener)
     .flow(step1)
     .end()
