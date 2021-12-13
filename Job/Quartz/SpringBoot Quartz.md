@@ -6,6 +6,12 @@ https://cloud.tencent.com/developer/article/1745977
 
 文档：https://docs.spring.io/spring-framework/docs/current/reference/html/integration.html#scheduling-quartz
 
+
+
+# SpringBoot对quartz做了啥
+
+和之前引入quartz包(参考[Quartz文档](https://www.w3cschool.cn/quartz_doc/))不同之处在于，之前是要先定义好Job和Trigger，然后通过Scheduler去绑定他们，最后去执行start来开启定时任务。而spring-boot-starter-quartz则**省去了Job和Trigger的手动绑定**（参考链接: [SpringBoot官方文档](https://docs.spring.io/spring-boot/docs/2.2.6.RELEASE/reference/html/index.html)），也就是做好配置即可。
+
 # 依赖
 
 ```xml
@@ -15,7 +21,43 @@ https://cloud.tencent.com/developer/article/1745977
 </dependency>
 ```
 
+# application.yml配置
 
+```yaml
+# spring的datasource等配置未贴出
+spring:
+  quartz:
+      # 将任务等保存化到数据库
+      job-store-type: jdbc
+      # 程序结束时会等待quartz相关的内容结束
+      wait-for-jobs-to-complete-on-shutdown: true
+      # QuartzScheduler启动时更新己存在的Job,这样就不用每次修改targetObject后删除qrtz_job_details表对应记录
+      overwrite-existing-jobs: true
+      # 这里居然是个map，搞得智能提示都没有，佛了
+      properties:
+        org:
+          quartz:
+              # scheduler相关
+            scheduler:
+              # scheduler的实例名
+              instanceName: scheduler
+              instanceId: AUTO
+            # 持久化相关
+            jobStore:
+              class: org.quartz.impl.jdbcjobstore.JobStoreTX
+              driverDelegateClass: org.quartz.impl.jdbcjobstore.StdJDBCDelegate
+              # 表示数据库中相关表是QRTZ_开头的
+              tablePrefix: QRTZ_
+              useProperties: false
+            # 线程池相关
+            threadPool:
+              class: org.quartz.simpl.SimpleThreadPool
+              # 线程数
+              threadCount: 10
+              # 线程优先级
+              threadPriority: 5
+              threadsInheritContextClassLoaderOfInitializingThread: true
+```
 
 # job持久化配置
 
@@ -256,9 +298,7 @@ scheduler.unscheduleJob(TriggerKey.triggerKey(orderNo));//移除触发器
 scheduler.deleteJob(JobKey.jobKey(orderNo));//删除Job
 ```
 
-
-
-# 配置
+ 
 
 ## @DisallowConcurrentExecution 
 
@@ -270,12 +310,24 @@ scheduler.deleteJob(JobKey.jobKey(orderNo));//删除Job
 
 SpringBoot自带的创建SchedulerFactoryBean源码：
 
+![image-20211204233521862](img/SpringBoot Quartz.assets/image-20211204233521862.png)
+
+会将如下对象作为依赖的Bean
+
+- spring.quartz开头的配置(QuartzProperties对象)
+- JobDetail Bean
+- Trigger Bean
+- Spring上下文
+- SchedulerFactoryBeanCustomizer Bean
+- Calendar Trigger Bean
+
 ```java
 @Bean
 @ConditionalOnMissingBean
 public SchedulerFactoryBean quartzScheduler(QuartzProperties properties,
       ObjectProvider<SchedulerFactoryBeanCustomizer> customizers, ObjectProvider<JobDetail> jobDetails,
       Map<String, Calendar> calendars, ObjectProvider<Trigger> triggers, ApplicationContext applicationContext) {
+    
    SchedulerFactoryBean schedulerFactoryBean = new SchedulerFactoryBean();
    SpringBeanJobFactory jobFactory = new SpringBeanJobFactory();
    jobFactory.setApplicationContext(applicationContext);
@@ -283,6 +335,7 @@ public SchedulerFactoryBean quartzScheduler(QuartzProperties properties,
    if (properties.getSchedulerName() != null) {
       schedulerFactoryBean.setSchedulerName(properties.getSchedulerName());
    }
+   //设置是否自启动
    schedulerFactoryBean.setAutoStartup(properties.isAutoStartup());
    schedulerFactoryBean.setStartupDelay((int) properties.getStartupDelay().getSeconds());
    schedulerFactoryBean.setWaitForJobsToCompleteOnShutdown(properties.isWaitForJobsToCompleteOnShutdown());
@@ -298,6 +351,8 @@ public SchedulerFactoryBean quartzScheduler(QuartzProperties properties,
 }
 ```
 
+
+
 也就是说我们可以不用自己创建SchedulerFactoryBean，可以直接使用
 
 ```java
@@ -305,7 +360,7 @@ public SchedulerFactoryBean quartzScheduler(QuartzProperties properties,
 private Scheduler scheduler;
 ```
 
-
+但是，会有问题，默认会在程序启动时自动执行全部job
 
 
 

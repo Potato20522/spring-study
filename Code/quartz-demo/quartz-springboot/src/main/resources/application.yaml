@@ -1,0 +1,22 @@
+server:
+  port: 8091
+spring:
+  application:
+    name: quartz-demoa
+  mvc:
+    pathmatch:
+      matching-strategy: ant_path_matcher # 解决Springboot2.6与swagger3整合失败
+  datasource:
+    url: jdbc:postgresql://localhost:5432/mybatis
+    username: postgres
+    password: postgres
+
+  quartz:
+    wait-for-jobs-to-complete-on-shutdown: true #job执行完毕才能关闭调度器
+    auto-startup: false # 关闭job自启，由程序调用
+org:
+  jobrunr:
+    background-job-server:
+      enabled: true
+    dashboard:
+      enabled: true
