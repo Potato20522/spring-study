@@ -12,6 +12,16 @@ https://cloud.tencent.com/developer/article/1562888
 
 不同的方法之间的事务传播保证在同一个事务内，是通过**统一的数据源来实现的**，事务开始时**将数据源绑定到ThreadLocal**中，**后续加入的事务从ThreadLocal获取数据源来保证数据源的统一**。
 
+![image-20211214092340970](img/@Transactional.assets/image-20211214092340970.png)
+
+上图来源：自己画的
+
+
+
+![在这里插入图片描述](img/@Transactional.assets/20181207003257884.png)
+
+上图来源：https://blog.csdn.net/qq_20597727/article/details/84868035
+
 ## 1. 自动导入配置类
 
 ## 2. TransactionAutoConfiguration

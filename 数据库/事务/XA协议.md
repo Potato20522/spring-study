@@ -151,9 +151,18 @@ XA分布式事务协议，包含二阶段提交（2PC），三阶段提交（3PC
 
 - 同时却多了一次网络通信，性能上反而变得更差
 
+# PostgreSQL开启XA事务
+
+如果PostgreSQL参与分布式事务(XA)处理，则需要在配置文件postgres.conf中设置max_prepared_transactions参数，此参数用于指定分布式事务中两步提交准备事务的最大数量。默认值为0，此时不支持分布式事务。
+
+max_prepared_transactions参数值不应该小于max_connections参数值，这样每一个session都可以至少有一个可用的准备事务。
+
+```properties
+max_connections = 100 #默认是100
+max_prepared_transactions = 100 #默认是0
+```
 
 
-1
 
 
 

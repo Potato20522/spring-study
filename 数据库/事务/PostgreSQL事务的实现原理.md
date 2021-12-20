@@ -242,7 +242,7 @@ hrdb-> where attrelid = 'test'::regclass;
 
 ```
 
-查询结果显示，表 test 中一共包含 7 个字段。PostgreSQL 为我们增加了 6 个额外的系统字段，它们的 attnum 属性都是负数。
+查询结果显示，表 test 中一共包含 7 个字段。PostgreSQL 为我们增加了 6 个额外的系统字段，它们的 attnum **属性都是负数**。
 
 下面让我们分别看看这些系统字段的作用。
 
@@ -360,8 +360,7 @@ hrdb=> select ctid, * from test;
 
 需要注意的是，ctid 的值有可能会改变（例如 VACUUM FULL）；因此，ctid 不适合作为一个长期的行标识，应该使用主键作为行的逻辑标识。
 
-```
-```
+**执行更新某一条数据的操作时，这条数据的cid会+1，后面的全部数据也会+1**
 
 #### xmin 
 
@@ -431,8 +430,7 @@ hrdb=> select xmax, col from test;
 
 ```sql
 -- 会话 2
-hrdb=> update test
-hrdb-> set col= col*2;
+hrdb=> update test set col= col*2;
 UPDATE 5
 
 ```
@@ -492,7 +490,7 @@ cmin 代表了插入事务中的命令标识符（从 0 开始）。命令标识
 
 #### cmax
 
-cmax 代表了删除事务中的命令标识符，或者 0。
+cmax 代表了删除或更新事务中的命令标识符，或者 0。
 
 我们先查看一下 test 表中的
 
@@ -575,6 +573,25 @@ hrdb=> select cmin, cmax, col from test;
 
 当系统意外宕机后，恢复时需要回退未完成事务所做的更改并确保已提交事务所作的更改均已生效。在PostgreSQL中通过前面提到的MVCC很容易做到的第一点，只要把所有pg_clog文件中记录的所有“运行中”的事务的状态置为“中止”即可，这些事务在宕机时都没有结束。对于第二点，必须确保事务提交时修改已真正写入到永久存储中。但是直接刷新事务修改后的数据到磁盘是很费时的，为解决这个问题于是引入了WAL(Write-Ahead Log)。
 
+WAL的基本原理如下：
+
+1）更新数据页前先将更新内容记入WAL日志
+
+2）异步刷新数据Buffer的脏页和WAL Buffer到磁盘
+
+3）Buffer管理器确保绝不会先于对应的WAL记录刷新脏数据到磁盘
+
+4）事务提交时，将WAL日志同步刷新到磁盘
+
+5）Checkpoint发生时，将数据Buffer的所有脏页刷新到磁盘
+
+数据更新时的Buffer修改：
+
 
 
 ![PostgreSQL事务处理机制原理](img/PostgreSQL事务的实现原理.assets/18439.png)
+
+更新提交和Checkpoint时的磁盘同步：
+
+![PostgreSQL事务处理机制原理](img/PostgreSQL事务的实现原理.assets/18440.png)
+

@@ -13,6 +13,30 @@ Spring Boot通过Atomkos或Bitronix的内嵌事务管理器支持跨多个XA资�
 
 当发现JTA环境时，Spring Boot将使用Spring的 JtaTransactionManager 来管理事务。自动配置的JMS，DataSource和JPA　beans将被升级以支持XA事务。可以使用标准的Spring idioms，比如 @Transactional ，来参与到一个分布式事务中。如果处于JTA环境，但仍想使用本地事务，你可以将 spring.jta.enabled 属性设置为 false 来禁用JTA自动配置功能。
 
+# JTA事务过程
+
+**外部（全局）事务(调用应用程序的JTA管理器)**
+
+以下红色图片来源：https://juejin.cn/post/6844903666273484814
+
+![img](img/JTA.assets/1657ac608f6389ff~tplv-t2oaga2asx-watermark.awebp)
+
+
+
+**XA**
+
+![img](img/JTA.assets/1657aca496b37327~tplv-t2oaga2asx-watermark.awebp)
+
+
+
+**JTA**
+
+![img](img/JTA.assets/1657aca7f0817a83~tplv-t2oaga2asx-watermark.awebp)
+
+
+
+
+
 
 
 # JTA中的对象
@@ -39,6 +63,13 @@ public interface UserTransaction {
     void setTransactionTimeout(int var1) throws SystemException;
 }
 ```
+
+**在开发人员调用 UserTransaction.begin() 方法时 TransactionManager 会创建一个 Transaction 事务对象（标志着事务的开始）并把此对象通过 ThreadLocale 关联到当前线程上；同样 UserTransaction.commit() 会调用 TransactionManager.commit()， 方法将从当前线程下取出事务对象 Transaction 并把此对象所代表的事务提交， 即调用 Transaction.commit()** **TransactionManager定义了如下的方法：**
+
+
+
+
+
 
 ## TransactionManager接口
 
