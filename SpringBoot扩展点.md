@@ -247,6 +247,54 @@ context.listener.classes=com.sl.springbootdemo.Listeners.ApplicationListenerTest
 
 　Spring-boot-{version}.jar包中提供一个类DelegatingApplicationListener，该类的作用是从application.properties中读取配置context.listener.classes，并将事件广播给这些配置的监听器。通过前面一章对SpringBoot启动流程分析，我们已经了解到SpringBoot启动时会从META-INF/spring.factories中读取key为org.springframework.context.ApplicationListener的所有监听器。DelegatingApplicationListener的功能可以让我们不需要创建META-INF/spring.factories，直接在application.properties中配置即可。
 
+#### Spring Boot 启动事件顺序
+
+**1、ApplicationStartingEvent**
+
+这个事件在 Spring Boot 应用运行开始时，且进行任何处理之前发送(除了监听器和初始化器注册之外)，监听这个事件，这就是SpringBoot启动过程中最早的扩展点了。
+
+**2、ApplicationEnvironmentPreparedEvent**
+
+这个事件在当已知要在上下文中使用 Spring 环境(Environment)时，在 Spring 上下文(context)创建之前发送。
+
+**3、ApplicationContextInitializedEvent**
+
+这个事件在当 Spring 应用上下文(ApplicationContext)准备好了，并且应用初始化器(ApplicationContextInitializers)已经被调用，在 bean 的定义(bean definitions)被加载之前发送。
+
+**4、ApplicationPreparedEvent**
+
+这个事件是在 Spring 上下文(context)刷新之前，且在 bean 的定义(bean definitions)被加载之后发送。
+
+**5、ApplicationStartedEvent**
+
+这个事件是在 Spring 上下文(context)刷新之后，且在 application/ command-line runners 被调用之前发送。
+
+**6、AvailabilityChangeEvent**
+
+这个事件紧随上个事件之后发送，状态：ReadinessState.CORRECT，表示应用已处于活动状态。
+
+**7、ApplicationReadyEvent**
+
+这个事件在任何 application/ command-line runners 调用之后发送。
+
+**8、AvailabilityChangeEvent**
+
+这个事件紧随上个事件之后发送，状态：ReadinessState.ACCEPTING_TRAFFIC，表示应用可以开始准备接收请求了。
+
+**9、ApplicationFailedEvent**
+
+这个事件在应用启动异常时进行发送。
+
+上面所介绍的这些事件列表仅包括绑定到 SpringApplication 的 SpringApplicationEvents 事件，除了这些事件以外，以下事件也会在 ApplicationPreparedEvent 之后和 ApplicationStartedEvent 之前发送：
+
+- **WebServerInitializedEvent**
+
+这个 Web 服务器初始化事件在 WebServer 启动之后发送，对应的还有 ServletWebServerInitializedEvent(Servlet Web 服务器初始化事件)、ReactiveWebServerInitializedEvent(响应式 Web 服务器初始化事件)。
+
+- **ContextRefreshedEvent**
+
+这个上下文刷新事件是在 Spring 应用上下文(ApplicationContext)刷新之后发送。
+
 ### 扩展SpringApplicationRunlistener
 
 **SpringApplicationRunListener**属于应用程序启动层面的监听器,在springboot启动时候,调用run方法进行反射加载初始化。**此时上下文还没有加载**，如果通过@Compnant是起不了作用的。
@@ -319,7 +367,7 @@ public class DemoSpringApplicationRunListener implements SpringApplicationRunLis
 
 接着，我们还要满足SpringFactoriesLoader的约定，在当前SpringBoot项目的classpath下新建META-INF目录，并在该目录下新建spring.fatories文件，文件内容如下:
 
-```
+```properties
 org.springframework.boot.SpringApplicationRunListener=\
     com.hafiz.springbootdemo.DemoSpringApplicationRunListener
 ```
@@ -331,6 +379,77 @@ org.springframework.boot.SpringApplicationRunListener=\
 **SpringApplicationRunListener**属于应用程序启动层面的监听器,在springboot启动时候,调用run方法进行反射加载初始化。**此时上下文还没有加载**，如果通过@Compnant是起不了作用的。
 
 **Applicationlistener**通过spring上下文加载初始化的
+
+## EnvironmentPostProcessor扩展点
+
+https://blog.csdn.net/dong19891210/article/details/106436364
+
+https://www.isolves.com/it/cxkf/yy/JAVA/2019-10-10/5850.html
+
+https://blog.csdn.net/weixin_43827985/article/details/114368232
+
+EnvironmentPostProcessor从名字上看，叫做"环境后置处理器"，它是一个接口，它可以再spring上下文启动的时候，去初始化一些基本配置信息，将某些变量信息，加载到spring容器上下文中，更加通俗的理解就是它可以用来解析加载我们自定义额外properties。
+
+举例来说:
+
+\1) 我们可以使用EnvironmentPostProcessor来加载json文件中的kv属性，将其解析到全局的环境变量里面，然后使用@Value来获取到信息
+
+2）我们甚至可以使用EnvironmentPostProcessor来加载远程的配置，例如我们可以使用这个组件加载nacos的服务器的配置信息
+
+
+
+config/myapp.properties文件
+
+```properties
+app.url=https://github.com/dongguangming/
+app.name=dgm
+app.desc=dongguangming github
+app.customComponentScanPackages=com.spring.mapper,com.spring.mapper
+mysqluser=rootroot
+mysqlpwd=cstorfscstorfs
+app.who=who are you
+```
+
+myapp.properties.文件
+
+```properties
+app.url=https://github.com/dongguangming//
+app.name=dgmdgm
+app.desc=dongguangming github
+app.customComponentScanPackages=com.spring.mapper,com.spring.mapper
+```
+
+**实现EnvironmentPostProcessor**
+
+```java
+@Configuration
+public class Configs implements EnvironmentPostProcessor, Ordered {
+
+    private static final Integer POST_PROCESSOR_ORDER = Integer.MIN_VALUE+10;
+
+    @Override
+    public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
+		//读取配置文件的逻辑
+    }
+
+    @Override
+    public int getOrder() {
+        return this.POST_PROCESSOR_ORDER+1;
+    }
+
+}
+
+```
+
+**配置进spring.factories**
+
+在resources 下 META-INF文件夹下加上 spring.factories文件，配置org.springframework.boot.env.EnvironmentPostProcessor
+
+```
+Configsorg.springframework.boot.env.EnvironmentPostProcessor=com.test.Configs
+```
+
+
 
 ## Bean生命周期中的扩展点
 
@@ -741,6 +860,8 @@ ApplicationContext 被初始化或刷新时，该事件被发布。这也可以�
 
 这是一个 web-specific 事件，告诉所有 bean HTTP 请求已经被服务。只能应用于使用DispatcherServlet的Web应用。在使用Spring作为前端的MVC控制器时，当Spring处理用户请求结束后，系统会自动触发该事件
 
+
+
 ## @Component 是如何生效的
 
 [SpringBoot中@Component是如何生效的 - 简书 (jianshu.com)](https://www.jianshu.com/p/723758807fd1)
@@ -1055,4 +1176,6 @@ public class ActionInNoneDevEnv {
 启动应用，可通过日志查看`ActionInNoneDevEnv`的`run`方法正常运行，如下图。如果在`application.properties`中指定启动环境为dev则该组件不会被加载到上下文中。
 
 ![在这里插入图片描述](SpringBoot扩展点.assets/20200503100402892.png)
+
+ 
 

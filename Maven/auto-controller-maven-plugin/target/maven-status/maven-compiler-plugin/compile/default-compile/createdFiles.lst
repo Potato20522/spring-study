@@ -1,0 +1,16 @@
+com\potato\autocontroller\controller\ControllerClassVisitor.class
+com\potato\autocontroller\strategy\FindStrategy.class
+com\potato\autocontroller\strategy\GenerateClassStrategy.class
+com\potato\autocontroller\strategy\GenerateStrategy.class
+com\potato\autocontroller\util\IOUtils.class
+com\potato\autocontroller\strategy\Strategy.class
+com\potato\autocontroller\MethodCoverageMethodVisitor.class
+com\potato\autocontroller\util\ReadUtils.class
+com\potato\autocontroller\util\JarUtils.class
+com\potato\autocontroller\controller\ControllerClassWriter.class
+com\potato\autocontroller\MethodCoverageClassVisitor.class
+com\potato\autocontroller\util\FileUtils.class
+com\potato\autocontroller\strategy\FindMethodStrategy.class
+com\potato\autocontroller\strategy\GenerateMethodStrategy.class
+com\potato\autocontroller\AutoControllerMojo.class
+com\potato\autocontroller\strategy\FindClassStrategy.class
