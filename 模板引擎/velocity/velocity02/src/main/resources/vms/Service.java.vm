@@ -1,0 +1,33 @@
+package ${package}.service;
+
+import com.itheima.pojo.${className};
+
+import java.util.List;
+import java.util.Map;
+
+public interface ${className}Service {
+
+    /**
+     * 查询数据列表
+     * @return
+     */
+    List<${className}> list();
+
+    /**
+     * 保存数据
+     * @param ${classname}
+     */
+    void save(${className} ${classname});
+
+    /**
+     * 更新数据
+     * @param ${classname}
+     */
+    void update(${className} ${classname});
+
+    /**
+     * 删除数据
+     * @param ids
+     */
+    void delete(Integer[] ids);
+}

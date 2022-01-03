@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<h1>if指令</h1>
+#set($language="PHP")
+#if($language.equals("JAVA"))
+java开发工程师
+#elseif($language.equals("PHP"))
+php开发工程师
+#else
+开发工程师
+#end
+
+</body>
+</html>

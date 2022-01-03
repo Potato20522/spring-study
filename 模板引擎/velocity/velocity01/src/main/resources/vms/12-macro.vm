@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<h1>定义宏</h1>
+  #macro(table $list)
+    #foreach($item in $list)
+    <table border="1px">
+        <tbody>
+        <tr>
+            <td>编号</td>
+            <td>用户名</td>
+            <td>密码</td>
+            <td>邮箱</td>
+            <td>年龄</td>
+            <td>操作</td>
+        </tr>
+        <tr>
+            <td>${foreach.count}</td>
+            <td>${item.username}</td>
+            <td>${item.password}</td>
+            <td>${item.email}</td>
+            <td>${item.age}</td>
+            <td>
+                <a href="">编辑</a>
+                <a href="">删除</a>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+    #end
+
+  #end
+
+<h1>调用宏</h1>
+  #table($users)
+</body>
+</html>

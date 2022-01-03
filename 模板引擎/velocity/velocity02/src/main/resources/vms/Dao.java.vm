@@ -1,0 +1,7 @@
+package ${package}.dao;
+
+import ${package}.pojo.${className};
+import tk.mybatis.mapper.common.Mapper;
+
+public interface ${className}Dao extends Mapper<${className}> {
+}

@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<h1>引用对象</h1>
+常规语法 : $user.username ---- $user.password ---- $user.email
+正规语法 : ${user.username} ---- ${user.password} ---- ${user.email}
+
+常规语法 : $!user.username ---- $!user.password ---- $!user.email
+正规语法 : $!{user.username} ---- $!{user.password} ---- $!{user.email}
+</body>
+</html>

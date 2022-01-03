@@ -1,0 +1,32 @@
+package ${package}.service.impl;
+
+import ${package}.dao.${className}Dao;
+import ${package}.pojo.${className};
+import ${package}.service.${className}Service;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Stream;
+
+public class ${className}ServiceImpl  implements ${className}Service {
+
+    @Autowired
+    private ${className}Dao ${classname}Dao ;
+
+    public List<${className}> list() {
+        return ${classname}Dao.selectAll();
+    }
+
+    public void save(${className} ${classname}) {
+        ${classname}Dao.insert(${classname});
+    }
+
+    public void update(${className} ${classname}) {
+        ${classname}Dao.updateByPrimaryKey(${classname});
+    }
+
+    public void delete(Integer[] ids) {
+        Stream.of(ids).forEach(${classname}Dao::deleteByPrimaryKey);
+    }
+}

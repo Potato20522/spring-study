@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<h1>set指令</h1>
+#set($str="hello world")
+#set($int=10)
+#set($arr=[1,2,3,4])
+#set($boolean=true)
+#set($map={"key1":"value1","key2":"value2","key3":"value13"})
+## 在声明数据的时候，可以引用之前定义过的变量
+#set($name="zhangsan")
+#set($str2="hello, how are you, $name !")
+##获取set指令定义的变量
+字符串：${str}
+整型：${int}
+数组：${arr}
+布尔：${boolean}
+map:${map.key1}--${map.key2}
+${str2}
+
+</body>
+</html>

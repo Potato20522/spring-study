@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<h1>遍历数组</h1>
+  #foreach($str in $hobbies)
+    ${foreach.index} -- ${str}  <br>
+  #end
+
+<h1>变量对象集合</h1>
+
+  #foreach($user in $users)
+
+  #end
+<table>
+    <tbody>
+    <tr>
+        <td>编号</td>
+        <td>用户名</td>
+        <td>密码</td>
+        <td>邮箱</td>
+        <td>年龄</td>
+        <td>操作</td>
+    </tr>
+    <tr>
+        <td>${foreach.index}</td>
+        <td>${user.username}</td>
+        <td>${user.password}</td>
+        <td>${user.email}</td>
+        <td>${user.age}</td>
+        <td>
+            <a href="">编辑</a>
+            <a href="">删除</a>
+        </td>
+    </tr>
+    </tbody>
+</table>
+
+<h1>遍历map集合</h1>
+<h2>遍历值</h2>
+  #foreach($value in $map)
+    $value
+  #end
+
+<h2>遍历键值对</h2>
+  #foreach($entry in $map.entrySet())
+    $entry.key -- $entry.value
+  #end
+</body>
+</html>
