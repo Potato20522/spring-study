@@ -14,6 +14,8 @@ Liquibase是一个用于跟踪、管理**数据库变化**的开源**数据库�
 - 日志文件支持多种格式，如XML, YAML, JSON, SQL等；
 - 支持多种运行方式，如命令行、Spring集成、Maven插件、Gradle插件等；
 
+
+
 # Spring boot中使用LiquiBase
 
 Spring boot内置了对Liquibase的支持，只需要在项目中引入Liquibase依赖并进行配置即可。版本号不用写。
