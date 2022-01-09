@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body >
+
+
+<!-- Will produce 'http://localhost:8080/gtvg/order/details?orderId=3' (plus rewriting) -->
+<a href="details.html"
+   th:href="@{http://localhost:8080/gtvg/order/details(orderId=${3}, itemName=${'苹果'})}">view</a>
+
+<!-- Will produce '/gtvg/order/details?orderId=3' (plus rewriting) -->
+<a href="details.html" th:href="@{/order/details(orderId=${3})}">view</a>
+
+<!-- Will produce '/gtvg/order/3/details' (plus rewriting) -->
+<a href="details.html" th:href="@{/order/{orderId}/details(orderId=${3})}">view</a>
+
+</body>
+</html>

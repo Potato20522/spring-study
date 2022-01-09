@@ -1,0 +1,24 @@
+yaml:
+  level:
+    str: 字符串不需要加\n双引号
+    specialStr: "字符串不需要加\n双引号"
+    num: 666
+    Dnum: 666.88
+    birth: 2000/12/10 12:23:34
+#    list:
+#      - one
+#      - two
+#      - two
+    list: [one, two]
+#    set: [1,2,3,1]
+    set:
+      - 1
+      - 2
+      - 1
+    map: {key1: value1, key2: value2}
+    users:
+      - name: zhangsan
+        salary: 123.8
+      - name: lisi
+        salary: 888.00
+

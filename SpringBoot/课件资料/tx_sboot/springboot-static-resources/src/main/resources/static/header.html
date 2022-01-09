@@ -1,0 +1,51 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Admin Header</title>
+    <link href="css/header.css" rel="stylesheet" type="text/css" />
+<script type="text/javascript" language="javascript" src="js/jquery-1.3.2.min.js"></script>
+<script type="text/javascript">
+var oplist = new Array('about', 'user', 'news', 'mars', 'jielong', 'box', 'school', 'config', 'other');
+$(document).ready(function() {
+	$('#nav').find("a").click(function() {
+		var id = $(this).attr('id');
+		$.each(oplist, function(i, n) {
+			$('#'+n).attr('class', 'inactive');
+		});
+		$(this).parents("li").attr('class', 'active');
+	});
+});
+</script>
+</head>
+
+<body>
+<div id="all">
+	<div id="banner"><h1>拓薪教育Springboot</h1></div>
+    <div id="nav">
+    	<ul>
+        	<li class="inactive" id="other"><a href="menu.html" target="menu">管理操作</a></li>
+            <li class="inactive" id="about"><a href="menu.html" target="menu">管理操作</a></li>
+            <li class="inactive" id="user"><a href="menu.html" target="menu">管理操作</a></li>
+            <li class="inactive" id="news"><a href="menu.html" target="menu">管理操作</a></li>
+            <li class="inactive" id="mars"><a href="menu.html" target="menu">管理操作</a></li>
+            <li class="inactive" id="jielong"><a href="menu.html" target="menu">管理操作</a></li>
+            <li class="inactive" id="box"><a href="menu.html" target="menu">管理操作</a></li>
+            <li class="inactive" id="school"><a href="menu.html" target="menu">火柴学堂</a></li>
+            <li class="active" id="config"><a href="menu.html" target="menu">站点设置</a></li>
+        </ul>
+    </div>
+    <div id="main">
+    	<div id="welcome">欢迎你回来,Admin! <img src="images/clock.gif" /> 学习是最好的投资</div>
+        <div id="adminop">
+            <ul>
+                <li><a href="#">站点首页</a></li>
+                <li><a href="javascript:parent.location.reload();">管理首页</a></li>
+                <li><a href="javascript:parent.location.reload();">退出管理</a></li>
+                <li><a href="#">站点首页</a></li>
+            </ul>
+        </div>
+    </div>
+</div>
+</body>
+</html>

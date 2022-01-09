@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body >
+<table border="1">
+    <tr>
+        <th>NAME</th>
+        <th>AGE</th>
+        <th>ROLE</th>
+    </tr>
+    <tr th:each="user ,iterStat : ${users}" th:class="${iterStat.odd}? 'odd'">
+        <td th:text="${user.name}"></td>
+        <td th:text="${user.age}"></td>
+        <td >
+            <span th:text="${user.role == null?'-':user.role.roleName}"></span>
+            <a th:href="@{/user/roleDetail}"
+               th:if="${user.role != null}">view</a>
+        </td>
+    </tr>
+</table>
+</body>
+</html>

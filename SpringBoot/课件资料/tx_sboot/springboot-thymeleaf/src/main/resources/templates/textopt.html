@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body >
+<span th:text="'The name of the user is ' + ${user.name}"></span>
+
+<span th:text="|Welcome to our application, ${user.name}!|"></span>
+
+<span th:text="${user.name} + ' ' + |${user.name}, ${user.role.roleName}|"></span>
+
+<div th:text="${user.age} % 2 == 0"></div>
+
+
+<div th:if="${user.age} > 1">
+    <span th:text="'Execution mode is ' + ( (${execMode} == 'dev')? 'Development' : 'Production')"></span>
+</div>
+</body>
+</html>

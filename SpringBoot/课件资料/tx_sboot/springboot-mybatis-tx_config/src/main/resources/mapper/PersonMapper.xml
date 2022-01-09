@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="cn.tx.sboot.mapper.PersonMapper">
+    <select id="selectById" resultType="Person">
+        select * from person t where t.pid = #{pid}
+    </select>
+    <select id="selectAll" resultType="Person">
+        select * from person
+    </select>
+    <insert id="insert" parameterType="person">
+        <selectKey keyProperty="pid" resultType="int" order="BEFORE">
+            select  last_insert_id()
+        </selectKey>
+        insert into person(pid, pname, addr, gender, birth)values(#{pid},#{pname},#{addr},#{gender},#{birth} )
+    </insert>
+    <delete id="delete" parameterType="int" >
+        delete  from person  where pid = #{pid}
+    </delete>
+</mapper>

@@ -1,0 +1,20 @@
+acme:
+  enabled: true
+  remote-address: 192.168.0.108
+  spring:
+    profiles: test
+#spring:
+#  profiles:
+#    active: pro
+---
+acme:
+  enabled: true
+  remote-address: 192.168.0.109
+spring:
+  profiles: dev
+---
+acme:
+  enabled: true
+  remote-address: 192.168.0.110
+spring:
+  profiles: pro

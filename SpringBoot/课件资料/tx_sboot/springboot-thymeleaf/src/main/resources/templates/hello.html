@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body >
+    <p th:text="${hello}"></p>
+    <p th:text="#{txjava.name}"></p>
+
+
+
+    <p th:text="${'姓名：'+user.name +'   年龄：'+ user.age}"></p>
+    <p th:text="${'姓名：'+user['name'] +'   角色：'+ user.role.roleName}"></p>
+    <p th:text="${'姓名：'+user['name'] +'   角色：'+ user['role']['roleName']}"></p>
+    <p th:text="${'姓名：'+users[6].name }"></p>
+
+    <p th:text="${#locale.country}"></p>
+    <p th:text="${#dates.format(now, 'yyyy-MM-dd')}"></p>
+    <p th:text="${#numbers.formatPercent(num, 3, 2)}"></p>
+
+    <p th:text="${#strings.substring(name,3,5)} "></p>
+    <p th:text="${#strings.arrayJoin(strarr,'-')} "></p>
+    <p th:text="${#strings.listSplit(strs,'-')} "></p>
+
+<hr>
+    <div th:object="${session.user}">
+        <p>Name: <span th:text="*{name}">Sebastian</span>.</p>
+        <p>age: <span th:text="*{age}">Pepper</span>.</p>
+    </div>
+    <div>
+        <p>Name: <span th:text="${session.user.name}"></span>.</p>
+        <p>age: <span th:text="${session.user.age}"></span>.</p>
+    </div>
+    <div th:object="${session.user}">
+        <p>Name: <span th:text="*{name}">Sebastian</span>.</p>
+        <p>age: <span th:text="${session.user.age}">Pepper</span>.</p>
+    </div>
+    <div >
+        <p>Name: <span th:text="*{session.user.name}"></span>.</p>
+        <p>age: <span th:text="*{session.user.age}"></span>.</p>
+    </div>
+
+
+
+</body>
+</html>

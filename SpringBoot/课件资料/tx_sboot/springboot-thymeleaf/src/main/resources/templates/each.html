@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body >
+<table>
+    <tr>
+        <th>索引</th>
+        <th>行号</th>
+        <th>是否第一行</th>
+        <th>是否最后一行</th>
+        <th>索引</th>
+        <th>NAME</th>
+        <th>AGE</th>
+    </tr>
+    <tr th:each="user ,iterStat : ${users}" th:class="${iterStat.odd}? 'odd'">
+        <td th:text="${iterStat.index}"></td>
+        <td th:text="${iterStat.count}"></td>
+        <td th:text="${iterStat.first} == true?'是第一行':'不是第一行'"></td>
+        <td th:text="${iterStat.last} == true?'是第一行':'不是第一行'"></td>
+        <td th:text="${user.name}"></td>
+        <td th:text="${user.age}"></td>
+    </tr>
+</table>
+</body>
+</html>

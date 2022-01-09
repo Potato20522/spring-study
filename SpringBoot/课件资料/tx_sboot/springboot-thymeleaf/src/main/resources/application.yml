@@ -1,0 +1,6 @@
+spring:
+  messages:
+    basename: i18n.messages
+#server:
+#  servlet:
+#    context-path: /gtvg

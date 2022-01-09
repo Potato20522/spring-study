@@ -1,0 +1,8 @@
+spring:
+  mvc:
+    format:
+      date: dd/MM/yyyy
+
+    view:
+      prefix: classpath:/templates/
+      suffix: .html
