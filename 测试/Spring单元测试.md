@@ -13,6 +13,8 @@ Spring全家桶也给提供了很多支持Mock的机制：
 
 ## Mock Environment
 
+查看Environment的概念: [Environment.md](../SpringBoot/spring-framework/Environment.md),如果点不开，就在本仓库里直接搜：Environment.md
+
 ```java
 class SpringTestApplicationTests {
     static MockEnvironment environment;
