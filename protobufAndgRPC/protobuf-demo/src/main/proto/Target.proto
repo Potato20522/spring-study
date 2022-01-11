@@ -1,0 +1,9 @@
+syntax = "proto3";
+package com.potato.proto;
+import "Point.proto";
+
+message Student {
+  int32 age = 1;
+  repeated Point3F points = 2;
+}
+

@@ -1,0 +1,8 @@
+syntax = "proto3";
+package com.potato.proto;
+import "Point.proto";
+
+message Person {
+  repeated Point3F points = 1;
+}
+
