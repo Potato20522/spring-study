@@ -1,18 +1,19 @@
 # kubernetes 概述
 
+课程地址：https://www.bilibili.com/video/BV1GT4y1A756
+
 前置知识：Linux操作、Docker
 
-​		kubernetes，简称 K8s，是用 8 代替 8 个字符“ubernete”而成的缩写。是一个开源
-的，用于管理云平台中多个主机上的容器化的应用，Kubernetes 的目标是让部署容器化的
-应用简单并且高效（powerful）,Kubernetes 提供了应用部署，规划，更新，维护的一种
-机制。
+​		kubernetes，简称 K8s，是用 8 代替 8 个字符“ubernete”而成的缩写。是一个开源的，用于管理云平台中多个主机上的容器化的应用，Kubernetes 的目标是让部署容器化的应用简单并且高效（powerful）,Kubernetes 提供了应用部署，规划，更新，维护的一种机制。
 
 - 2014年由谷歌开源的容器化集群管理系统
 - 使用K8S进行容器化部署
 - 利于应用的扩展
 - 目标：部署容器化应用更加简洁高效
 
-## kubernetes 功能和架构
+![image-20220118224915998](Kubernetes.assets/image-20220118224915998.png)
+
+## kubernetes 概念和架构
 
 ### 特性
 
@@ -61,13 +62,11 @@ K8S
 k8s 集群控制节点，对集群进行调度管理，接受集群外用户去集群操作请求；
 Master Node 组成:
 
--  API Server 集群统一入口，以restful方式，交给etcd存储
-
-- Scheduler 节点调度，选择node节点应用部署
-
-- ClusterState Store（ETCD 数据库）用于保存集群相关的数据
-
-- Controller MangerServer  处理集群中常规后台任务，一个资源对应一个控制器
+-  API Server 集群统一入口，以**restful**方式，交给etcd存储
+-  Scheduler 节点调度，选择node节点应用部署
+-  ClusterState Store（ETCD 数据库）用于保存集群相关的数据
+- Controller Manger  处理集群中常规后台任务，一个资源对应一个控制器
+- ETCD 存储系统，用于保存集群相关的数据
 
 **Worker Node**
 集群工作节点，运行用户业务应用容器；
@@ -78,11 +77,13 @@ Master Node 组成:
 - kube proxy   提供网络代理，提供负载均衡
 - ContainerRuntime；
 
-### 核心概念
+![image-20220118225746305](Kubernetes.assets/image-20220118225746305.png)
+
+### k8s核心概念
 
 - pod
   - 最小部署单元
-  - 一组容器的集合
+  - **一组容器的集合**
   - 共享网络
   - 生命周期是短暂的
 - controller
@@ -94,7 +95,7 @@ Master Node 组成:
 - service
   - 定义一组pod的访问规则
 
-## 集群搭建
+# 集群搭建目标
 
 ![image-20201203232930714](Kubernetes.assets/image-20201203232930714.png)
 
@@ -108,7 +109,45 @@ Master Node 组成:
 
 
 
+# 环境准备
 
+## 三台centos7虚拟机
+
+![image-20220118233645491](Kubernetes.assets/image-20220118233645491.png)
+
+## 禁止swap分区
+
+第一步关闭swap分区:
+
+```
+swapoff /mnt/swap
+```
+
+第二步修改配置文件 - /etc/fstab
+删除 /mnt/swap swap swap defaults 0 0 这一行或者注释掉这一行
+
+第三步确认swap已经关闭
+
+```
+free -m
+```
+
+若都显示 0 则表示关闭成功
+
+第四步调整 swappiness 参数
+
+```
+echo 0 > /proc/sys/vm/swappiness   # 临时生效
+```
+
+
+
+```
+vim /etc/sysctl.conf                           # 永久生效
+#  修改 vm.swappiness 的修改为 0
+vm.swappiness=0
+sysctl -p                                            # 使配置生效
+```
 
 
 
